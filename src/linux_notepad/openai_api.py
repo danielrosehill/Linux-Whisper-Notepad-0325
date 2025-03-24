@@ -14,17 +14,35 @@ class OpenAIManager:
     
     # Default text processing modes with their system prompts
     DEFAULT_TEXT_PROCESSING_MODES = {
-        "basic_cleanup": "Take the following transcript and refine it to add missing punctuation, resolve typos, add paragraph spacing, and generally enhance the presentation of the text while preserving the original meaning.",
+        "basic_cleanup": {
+            "prompt": "Take the following transcript and refine it to add missing punctuation, resolve typos, add paragraph spacing, and generally enhance the presentation of the text while preserving the original meaning.",
+            "requires_json": False
+        },
         
-        "extract_todos": "Extract only the to-do items from the following dictated text. Format them as a markdown list with checkboxes. For example: '- [ ] Task description'.",
+        "extract_todos": {
+            "prompt": "Extract only the to-do items from the following dictated text. Format them as a markdown list with checkboxes. For example: '- [ ] Task description'.",
+            "requires_json": True
+        },
         
-        "shakespearean": "Take the following dictated text and return it in Shakespearean English, maintaining the original meaning but using the style, vocabulary, and sentence structure typical of Shakespeare's works.",
+        "shakespearean": {
+            "prompt": "Take the following dictated text and return it in Shakespearean English, maintaining the original meaning but using the style, vocabulary, and sentence structure typical of Shakespeare's works.",
+            "requires_json": False
+        },
         
-        "meeting_minutes": "Format the following transcript as professional meeting minutes. Identify key discussion points, decisions made, and action items. Use appropriate headings and structure.",
+        "meeting_minutes": {
+            "prompt": "Format the following transcript as professional meeting minutes. Identify key discussion points, decisions made, and action items. Use appropriate headings and structure.",
+            "requires_json": False
+        },
         
-        "bullet_summary": "Summarize the following transcript as concise bullet points, capturing the main ideas and important details.",
+        "bullet_summary": {
+            "prompt": "Summarize the following transcript as concise bullet points, capturing the main ideas and important details.",
+            "requires_json": False
+        },
         
-        "technical_documentation": "Convert the following dictated text into technical documentation format. Use appropriate headings, code blocks for any technical elements, and clear explanations."
+        "technical_documentation": {
+            "prompt": "Convert the following dictated text into technical documentation format. Use appropriate headings, code blocks for any technical elements, and clear explanations.",
+            "requires_json": False
+        }
     }
     
     def __init__(self, config):
@@ -54,7 +72,21 @@ class OpenAIManager:
             try:
                 with open(custom_prompts_file, 'r') as f:
                     custom_prompts = json.load(f)
-                return custom_prompts
+                
+                # Convert legacy format if needed
+                updated_prompts = {}
+                for mode_id, data in custom_prompts.items():
+                    if isinstance(data, str):
+                        # Convert string to new format
+                        updated_prompts[mode_id] = {
+                            "prompt": data,
+                            "requires_json": mode_id == "extract_todos"  # Default assumption
+                        }
+                    else:
+                        # Already in new format
+                        updated_prompts[mode_id] = data
+                
+                return updated_prompts
             except Exception as e:
                 print(f"Error loading custom prompts: {e}")
                 return self.DEFAULT_TEXT_PROCESSING_MODES.copy()
@@ -77,26 +109,40 @@ class OpenAIManager:
     
     def get_prompt(self, mode_id):
         """Get the prompt for a specific mode"""
-        return self.TEXT_PROCESSING_MODES.get(mode_id, "")
+        mode_data = self.TEXT_PROCESSING_MODES.get(mode_id, {})
+        if isinstance(mode_data, str):
+            # Handle legacy format (string only)
+            return mode_data
+        elif isinstance(mode_data, dict):
+            # Handle new format (dict with prompt and requires_json)
+            return mode_data.get("prompt", "")
+        return ""
     
-    def add_custom_prompt(self, mode_id, name, prompt):
+    def requires_json(self, mode_id):
+        """Check if a mode requires JSON output"""
+        mode_data = self.TEXT_PROCESSING_MODES.get(mode_id, {})
+        if isinstance(mode_data, dict):
+            return mode_data.get("requires_json", False)
+        return False
+    
+    def add_custom_prompt(self, mode_id, name, prompt, requires_json=False):
         """Add or update a custom prompt"""
         # Ensure mode_id is valid
         mode_id = mode_id.lower().replace(" ", "_")
         
-        # Update the prompts dictionary
-        self.TEXT_PROCESSING_MODES[mode_id] = prompt
+        # Update the prompts dictionary with the new format
+        self.TEXT_PROCESSING_MODES[mode_id] = {
+            "prompt": prompt,
+            "requires_json": requires_json
+        }
         
         # Save to file
         return self.save_custom_prompts(self.TEXT_PROCESSING_MODES)
     
     def delete_custom_prompt(self, mode_id):
-        """Delete a custom prompt"""
+        """Delete a prompt (both custom and default)"""
         if mode_id in self.TEXT_PROCESSING_MODES:
-            # Don't delete default prompts
-            if mode_id in self.DEFAULT_TEXT_PROCESSING_MODES:
-                return False
-                
+            # Delete the prompt
             del self.TEXT_PROCESSING_MODES[mode_id]
             return self.save_custom_prompts(self.TEXT_PROCESSING_MODES)
         return False
@@ -243,18 +289,34 @@ class OpenAIManager:
         if not text:
             return {"success": False, "error": "No text provided for processing", "processed_text": "", "suggested_filename": ""}
         
-        # Get system prompt for the selected mode
-        base_prompt = self.TEXT_PROCESSING_MODES.get(
-            mode, 
-            self.TEXT_PROCESSING_MODES["basic_cleanup"]
-        )
+        # Get mode data
+        mode_data = self.TEXT_PROCESSING_MODES.get(mode, self.TEXT_PROCESSING_MODES["basic_cleanup"])
         
-        # Create a JSON-focused system prompt
-        system_prompt = f"{base_prompt} Return ONLY the processed text in a JSON response with the format: {{\"processed_text\": \"<your processed text here>\"}}"
+        # Handle legacy format
+        if isinstance(mode_data, str):
+            base_prompt = mode_data
+            requires_json = mode == "extract_todos"  # Default assumption
+        else:
+            base_prompt = mode_data.get("prompt", "")
+            requires_json = mode_data.get("requires_json", False)
+        
+        # For non-JSON modes that aren't basic_cleanup, prepend the basic_cleanup prompt
+        if not requires_json and mode != "basic_cleanup":
+            basic_cleanup_prompt = self.get_prompt("basic_cleanup")
+            system_prompt = f"{basic_cleanup_prompt} {base_prompt}"
+        else:
+            system_prompt = base_prompt
+        
+        # Add JSON formatting instruction for JSON modes
+        if requires_json:
+            system_prompt = f"{system_prompt} Return your response in JSON format."
         
         try:
             if not self.client:
                 self.client = openai.OpenAI(api_key=self.api_key)
+            
+            # Configure response format based on requires_json flag
+            response_format = {"type": "json_object"} if requires_json else None
             
             response = self.client.chat.completions.create(
                 model="gpt-3.5-turbo",
@@ -262,17 +324,26 @@ class OpenAIManager:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": text}
                 ],
-                response_format={"type": "json_object"}
+                response_format=response_format
             ) 
             
-            # Parse the JSON response
-            try:
-                response_content = response.choices[0].message.content if response.choices else "{}"
-                response_json = json.loads(response_content)
-                processed_text = response_json.get("processed_text", "")
-            except json.JSONDecodeError:
-                # Fallback if JSON parsing fails
-                processed_text = response.choices[0].message.content if response.choices else ""
+            # Handle response based on format
+            response_content = response.choices[0].message.content if response.choices else ""
+            
+            if requires_json:
+                # Parse the JSON response
+                try:
+                    response_json = json.loads(response_content)
+                    if mode == "extract_todos":
+                        processed_text = response_json.get("todos", response_content)
+                    else:
+                        processed_text = response_json.get("processed_text", response_content)
+                except json.JSONDecodeError:
+                    # Fallback if JSON parsing fails
+                    processed_text = response_content
+            else:
+                # For non-JSON responses, use the content directly
+                processed_text = response_content
             
             # Generate a suggested filename using JSON mode
             filename_response = self.client.chat.completions.create(
@@ -316,10 +387,23 @@ class OpenAIManager:
     
     def get_available_modes(self):
         """Get list of available text processing modes sorted alphabetically by name"""
-        modes = [
-            {"id": mode_id, "name": mode_id.replace("_", " ").title(), "description": prompt[:100] + "..."}
-            for mode_id, prompt in self.TEXT_PROCESSING_MODES.items()
-        ]
+        modes = []
+        for mode_id, data in self.TEXT_PROCESSING_MODES.items():
+            # Handle both legacy string format and new dict format
+            if isinstance(data, str):
+                prompt = data
+                requires_json = mode_id == "extract_todos"  # Default assumption
+            else:
+                prompt = data.get("prompt", "")
+                requires_json = data.get("requires_json", False)
+            
+            modes.append({
+                "id": mode_id, 
+                "name": mode_id.replace("_", " ").title(), 
+                "description": prompt[:100] + "...",
+                "type": "default" if mode_id in self.DEFAULT_TEXT_PROCESSING_MODES else "user",
+                "requires_json": requires_json
+            })
         
         # Sort modes alphabetically by name
         return sorted(modes, key=lambda x: x["name"])

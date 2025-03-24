@@ -10,7 +10,8 @@ from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QComboBox, QTextEdit, QLineEdit, QFileDialog, QTabWidget, QGroupBox,
     QFormLayout, QMessageBox, QProgressBar, QSplitter, QCheckBox,
-    QListWidget, QListWidgetItem, QDialog, QDialogButtonBox, QInputDialog, QApplication
+    QListWidget, QListWidgetItem, QDialog, QDialogButtonBox, QInputDialog, QApplication,
+    QTreeWidget, QTreeWidgetItem
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QThread
 from PyQt6.QtGui import QIcon, QFont, QClipboard
@@ -96,6 +97,7 @@ class MainWindow(QMainWindow):
         self.recording_time = 0
         self.processed_text = ""
         self.suggested_filename = ""
+        self.selected_prompt_name = ""  # Store the selected prompt name
         
         # Set up the UI
         self.init_ui()
@@ -154,6 +156,11 @@ class MainWindow(QMainWindow):
         prompts_tab_layout = QVBoxLayout(prompts_tab)
         self.tab_widget.addTab(prompts_tab, "System Prompts")
         
+        # Create about tab
+        about_tab = QWidget()
+        about_tab_layout = QVBoxLayout(about_tab)
+        self.tab_widget.addTab(about_tab, "About")
+        
         # Set up main tab UI
         self.setup_main_tab(main_tab_layout)
         
@@ -162,6 +169,9 @@ class MainWindow(QMainWindow):
         
         # Set up system prompts tab UI
         self.setup_system_prompts_tab(prompts_tab_layout)
+        
+        # Set up about tab UI
+        self.setup_about_tab(about_tab_layout)
         
         # Populate processing modes
         self.populate_processing_modes()
@@ -206,7 +216,7 @@ class MainWindow(QMainWindow):
         device_layout.addWidget(self.device_combo, 1)
         
         refresh_button = QPushButton("Refresh")
-        refresh_button.clicked.connect(self.populate_audio_devices)
+        refresh_button.clicked.connect(self.refresh_audio_devices)
         device_layout.addWidget(refresh_button)
         
         left_column.addLayout(device_layout)
@@ -219,6 +229,7 @@ class MainWindow(QMainWindow):
         self.record_button.setIcon(QIcon.fromTheme("media-record", QIcon.fromTheme("media-playback-start")))
         self.record_button.setToolTip("Start Recording")
         self.record_button.clicked.connect(self.start_recording)
+        self.record_button.setStyleSheet("background-color: #e53935; color: white;")  # Red color for record button
         controls_layout.addWidget(self.record_button)
         
         # Stop recording button
@@ -227,6 +238,7 @@ class MainWindow(QMainWindow):
         self.stop_button.setToolTip("Stop Recording")
         self.stop_button.clicked.connect(self.stop_recording)
         self.stop_button.setEnabled(False)
+        self.stop_button.setStyleSheet("background-color: #424242; color: white;")  # Dark gray color for stop button
         controls_layout.addWidget(self.stop_button)
         
         # Pause recording button
@@ -235,6 +247,7 @@ class MainWindow(QMainWindow):
         self.pause_button.setToolTip("Pause")
         self.pause_button.clicked.connect(self.toggle_pause)
         self.pause_button.setEnabled(False)
+        self.pause_button.setStyleSheet("background-color: #fb8c00; color: white;")  # Orange color for pause button
         controls_layout.addWidget(self.pause_button)
         
         # Clear recording button
@@ -243,6 +256,7 @@ class MainWindow(QMainWindow):
         self.clear_button.setToolTip("Clear Recording")
         self.clear_button.clicked.connect(self.clear_recording)
         self.clear_button.setEnabled(False)
+        self.clear_button.setStyleSheet("background-color: #0288d1; color: white;")  # Blue color for clear button
         controls_layout.addWidget(self.clear_button)
         
         left_column.addLayout(controls_layout)
@@ -413,7 +427,8 @@ class MainWindow(QMainWindow):
         # Instructions
         instructions_label = QLabel(
             "Create and edit system prompts for text processing. "
-            "Each prompt defines how your text will be processed."
+            "Each prompt defines how your text will be processed. "
+            "Prompts marked with 'JSON' will return structured data."
         )
         instructions_label.setWordWrap(True)
         layout.addWidget(instructions_label)
@@ -422,7 +437,9 @@ class MainWindow(QMainWindow):
         prompts_group = QGroupBox("Available Prompts")
         prompts_layout = QVBoxLayout(prompts_group)
         
+        # Use QListWidget with custom item widgets for the tags
         self.prompts_list = QListWidget()
+        self.prompts_list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
         self.prompts_list.currentItemChanged.connect(self.on_prompt_selected)
         prompts_layout.addWidget(self.prompts_list)
         
@@ -443,10 +460,6 @@ class MainWindow(QMainWindow):
         self.delete_prompt_button.setEnabled(False)
         buttons_layout.addWidget(self.delete_prompt_button)
         
-        self.reset_prompts_button = QPushButton("Reset to Defaults")
-        self.reset_prompts_button.clicked.connect(self.reset_prompts)
-        buttons_layout.addWidget(self.reset_prompts_button)
-        
         prompts_layout.addLayout(buttons_layout)
         
         # Prompt details
@@ -458,6 +471,11 @@ class MainWindow(QMainWindow):
         self.prompt_text_edit.setReadOnly(True)
         details_layout.addWidget(self.prompt_text_edit)
         
+        # JSON indicator in details
+        self.json_indicator = QLabel("")
+        self.json_indicator.setVisible(False)
+        details_layout.addWidget(self.json_indicator)
+        
         # Add all sections to layout
         layout.addWidget(prompts_group)
         layout.addWidget(details_group)
@@ -465,33 +483,168 @@ class MainWindow(QMainWindow):
         # Populate prompts list
         self.populate_prompts_list()
     
+    def setup_about_tab(self, layout):
+        """Set up the about tab UI"""
+        # Create a scrollable area for the about content
+        scroll_area = QWidget()
+        scroll_layout = QVBoxLayout(scroll_area)
+        scroll_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        
+        # App title
+        title_label = QLabel("Linux Whisper Notepad")
+        title_label.setStyleSheet("font-size: 24px; font-weight: bold; color: #1565C0;")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        scroll_layout.addWidget(title_label)
+        
+        # Description
+        description = QLabel(
+            "<p>Linux Whisper Notepad is an AI-powered speech-to-text application "
+            "that allows you to transcribe audio recordings and process the text using "
+            "various AI-driven formatting options.</p>"
+            
+            "<p>This project was developed as an AI code generation project using "
+            "Sonnet 3.7, Windsurf, and iterative prompting and editing. It is a work in progress.</p>"
+            
+            "<p>The application uses OpenAI's Whisper API for speech recognition and "
+            "GPT models for text processing, providing a seamless experience for "
+            "converting spoken words into formatted text.</p>"
+        )
+        description.setWordWrap(True)
+        description.setStyleSheet("font-size: 14px; margin: 10px 0;")
+        description.setTextFormat(Qt.TextFormat.RichText)
+        scroll_layout.addWidget(description)
+        
+        # Repository link
+        repo_layout = QHBoxLayout()
+        repo_label = QLabel("GitHub Repository:")
+        repo_label.setStyleSheet("font-weight: bold;")
+        repo_layout.addWidget(repo_label)
+        
+        repo_link = QLabel("<a href='https://github.com/danielrosehill/Whisper-Notepad-For-Linux'>https://github.com/danielrosehill/Whisper-Notepad-For-Linux</a>")
+        repo_link.setOpenExternalLinks(True)
+        repo_link.setTextFormat(Qt.TextFormat.RichText)
+        repo_layout.addWidget(repo_link)
+        repo_layout.addStretch()
+        
+        scroll_layout.addLayout(repo_layout)
+        
+        # Features section
+        features_label = QLabel("Key Features:")
+        features_label.setStyleSheet("font-size: 16px; font-weight: bold; margin-top: 20px;")
+        scroll_layout.addWidget(features_label)
+        
+        features_list = QLabel(
+            "<ul>"
+            "<li>Record audio directly from your microphone</li>"
+            "<li>Transcribe audio using OpenAI's Whisper API</li>"
+            "<li>Process text with various AI-powered formatting options</li>"
+            "<li>Create and customize your own text processing prompts</li>"
+            "<li>Save processed text to files with auto-generated filenames</li>"
+            "</ul>"
+        )
+        features_list.setTextFormat(Qt.TextFormat.RichText)
+        features_list.setWordWrap(True)
+        scroll_layout.addWidget(features_list)
+        
+        # Add some spacing
+        scroll_layout.addStretch()
+        
+        # Add the scroll area to the main layout
+        layout.addWidget(scroll_area)
+    
     def populate_prompts_list(self):
         """Populate the prompts list with available prompts"""
         self.prompts_list.clear()
         
         modes = self.openai_manager.get_available_modes()
         for mode in modes:
-            item = QListWidgetItem(mode["name"])
+            # Create item with type label (Default or User)
+            is_default = mode["id"] in self.openai_manager.DEFAULT_TEXT_PROCESSING_MODES
+            requires_json = mode.get("requires_json", False)
+            
+            # Create a custom widget for the list item with columns
+            item_widget = QWidget()
+            item_layout = QHBoxLayout(item_widget)
+            item_layout.setContentsMargins(5, 2, 5, 2)
+            
+            # Name label (left column)
+            name_label = QLabel(mode['name'])
+            name_label.setStyleSheet("font-size: 12px;")
+            item_layout.addWidget(name_label, 4)  # Give it more stretch
+            
+            # JSON indicator if applicable
+            if requires_json:
+                json_label = QLabel("JSON")
+                json_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                json_label.setStyleSheet(
+                    "background-color: #FF9800; color: white; border-radius: 4px; padding: 2px 8px; font-size: 11px; max-width: 70px;"
+                )
+                item_layout.addWidget(json_label, 1)
+            
+            # Tag label (right column)
+            if is_default:
+                # Create a green button for default tags
+                tag_label = QLabel("Default")
+                tag_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                tag_label.setStyleSheet(
+                    "background-color: #4CAF50; color: white; border-radius: 4px; padding: 2px 8px; font-size: 11px; max-width: 70px;"
+                )
+            else:
+                # Create a differently colored button for user tags
+                tag_label = QLabel("User")
+                tag_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                tag_label.setStyleSheet(
+                    "background-color: #2196F3; color: white; border-radius: 4px; padding: 2px 8px; font-size: 11px; max-width: 70px;"
+                )
+            
+            item_layout.addWidget(tag_label, 1)  # Give it less stretch
+            
+            # Create list item
+            item = QListWidgetItem()
             item.setData(Qt.ItemDataRole.UserRole, mode["id"])
+            item.setSizeHint(item_widget.sizeHint())  # Ensure proper sizing
+            
+            # Add the item to the list
             self.prompts_list.addItem(item)
+            self.prompts_list.setItemWidget(item, item_widget)
     
     def on_prompt_selected(self, current, previous):
         """Handle prompt selection"""
         if current:
             mode_id = current.data(Qt.ItemDataRole.UserRole)
             prompt_text = self.openai_manager.get_prompt(mode_id)
+            requires_json = self.openai_manager.requires_json(mode_id)
+            
             self.prompt_text_edit.setText(prompt_text)
+            
+            # Update JSON indicator
+            if requires_json:
+                self.json_indicator.setText("This prompt requires a JSON response")
+                self.json_indicator.setStyleSheet("color: #FF9800; font-weight: bold;")
+                self.json_indicator.setVisible(True)
+            else:
+                self.json_indicator.setVisible(False)
+            
+            # Get the name from the widget instead of the item directly
+            item_widget = self.prompts_list.itemWidget(current)
+            if item_widget:
+                # The name is in the first child widget (QLabel)
+                for child in item_widget.children():
+                    if isinstance(child, QLabel):
+                        self.selected_prompt_name = child.text()
+                        break
             
             # Enable edit/delete buttons
             self.edit_prompt_button.setEnabled(True)
             
-            # Only allow deletion of custom prompts
-            is_default = mode_id in self.openai_manager.DEFAULT_TEXT_PROCESSING_MODES
-            self.delete_prompt_button.setEnabled(not is_default)
+            # All prompts can be deleted now
+            self.delete_prompt_button.setEnabled(True)
         else:
             self.prompt_text_edit.clear()
+            self.selected_prompt_name = ""
             self.edit_prompt_button.setEnabled(False)
             self.delete_prompt_button.setEnabled(False)
+            self.json_indicator.setVisible(False)
     
     def add_new_prompt(self):
         """Add a new custom prompt"""
@@ -535,6 +688,11 @@ class MainWindow(QMainWindow):
             prompt_edit.setPlaceholderText("Enter your system prompt here...")
             layout.addWidget(prompt_edit)
             
+            # JSON checkbox
+            json_checkbox = QCheckBox("Requires JSON Response")
+            json_checkbox.setToolTip("Enable this if the prompt expects a structured JSON response from the AI")
+            layout.addWidget(json_checkbox)
+            
             # Buttons
             button_box = QDialogButtonBox(
                 QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
@@ -546,9 +704,11 @@ class MainWindow(QMainWindow):
             # Show dialog
             if dialog.exec() == QDialog.DialogCode.Accepted:
                 prompt_text = prompt_edit.toPlainText()
+                requires_json = json_checkbox.isChecked()
+                
                 if prompt_text:
-                    # Add prompt
-                    self.openai_manager.add_custom_prompt(mode_id, name, prompt_text)
+                    # Add prompt with JSON flag
+                    self.openai_manager.add_custom_prompt(mode_id, name, prompt_text, requires_json)
                     
                     # Refresh lists
                     self.populate_prompts_list()
@@ -570,8 +730,9 @@ class MainWindow(QMainWindow):
             return
         
         mode_id = current_item.data(Qt.ItemDataRole.UserRole)
-        name = current_item.text()
+        name = self.selected_prompt_name  # Use the stored name
         current_prompt = self.openai_manager.get_prompt(mode_id)
+        requires_json = self.openai_manager.requires_json(mode_id)
         
         # Create prompt edit dialog
         dialog = QDialog(self)
@@ -593,6 +754,12 @@ class MainWindow(QMainWindow):
         prompt_edit.setText(current_prompt)
         layout.addWidget(prompt_edit)
         
+        # JSON checkbox
+        json_checkbox = QCheckBox("Requires JSON Response")
+        json_checkbox.setChecked(requires_json)
+        json_checkbox.setToolTip("Enable this if the prompt expects a structured JSON response from the AI")
+        layout.addWidget(json_checkbox)
+        
         # Buttons
         button_box = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
@@ -604,12 +771,18 @@ class MainWindow(QMainWindow):
         # Show dialog
         if dialog.exec() == QDialog.DialogCode.Accepted:
             prompt_text = prompt_edit.toPlainText()
+            requires_json = json_checkbox.isChecked()
+            
             if prompt_text:
-                # Update prompt
-                self.openai_manager.add_custom_prompt(mode_id, name, prompt_text)
+                # Update prompt with JSON flag
+                self.openai_manager.add_custom_prompt(mode_id, name, prompt_text, requires_json)
                 
                 # Refresh prompt text
                 self.prompt_text_edit.setText(prompt_text)
+                
+                # Refresh lists to update JSON indicator
+                self.populate_prompts_list()
+                self.populate_processing_modes()
             else:
                 QMessageBox.warning(self, "Empty Prompt", "The prompt cannot be empty.")
     
@@ -620,7 +793,7 @@ class MainWindow(QMainWindow):
             return
         
         mode_id = current_item.data(Qt.ItemDataRole.UserRole)
-        name = current_item.text()
+        name = self.selected_prompt_name  # Use the stored name
         
         # Confirm deletion
         reply = QMessageBox.question(
@@ -642,37 +815,7 @@ class MainWindow(QMainWindow):
             else:
                 QMessageBox.warning(
                     self, "Deletion Failed", 
-                    "Could not delete the prompt. Default prompts cannot be deleted."
-                )
-    
-    def reset_prompts(self):
-        """Reset all prompts to defaults"""
-        # Confirm reset
-        reply = QMessageBox.question(
-            self, "Confirm Reset",
-            "Are you sure you want to reset all prompts to defaults? This will delete all custom prompts.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
-        )
-        
-        if reply == QMessageBox.StandardButton.Yes:
-            # Reset prompts
-            if self.openai_manager.reset_to_defaults():
-                # Refresh lists
-                self.populate_prompts_list()
-                self.populate_processing_modes()
-                
-                # Clear prompt text
-                self.prompt_text_edit.clear()
-                
-                QMessageBox.information(
-                    self, "Reset Complete", 
-                    "All prompts have been reset to defaults."
-                )
-            else:
-                QMessageBox.warning(
-                    self, "Reset Failed", 
-                    "Could not reset prompts to defaults."
+                    "Could not delete the prompt."
                 )
     
     def load_config(self):
@@ -708,27 +851,29 @@ class MainWindow(QMainWindow):
                     self.device_combo.setCurrentIndex(i)
                     break
         
-        # Load last used processing mode
-        last_mode = self.config.get("last_used_mode", "basic_cleanup")
+        # Always use basic_cleanup as default processing mode
+        # We don't load the last_used_mode from config anymore
         for i in range(self.mode_combo.count()):
-            if self.mode_combo.itemData(i) == last_mode:
+            if self.mode_combo.itemData(i) == "basic_cleanup":
                 self.mode_combo.setCurrentIndex(i)
                 break
     
     def refresh_audio_devices(self):
         """Refresh the list of audio devices"""
-        self.device_combo.clear()
+        # Get current device if selected
+        current_device = None
+        if self.device_combo.currentIndex() >= 0:
+            current_device = self.device_combo.currentData()
         
-        devices = self.audio_manager.get_devices()
-        for device in devices:
-            self.device_combo.addItem(f"{device['name']} ({device['channels']} ch, {device['sample_rate']} Hz)", device['index'])
+        # Populate devices
+        self.populate_audio_devices()
         
-        # If no devices found, disable recording
-        if self.device_combo.count() == 0:
-            self.record_button.setEnabled(False)
-            QMessageBox.warning(self, "No Audio Devices", "No audio input devices found. Please connect a microphone.")
-        else:
-            self.record_button.setEnabled(True)
+        # Try to reselect the previous device
+        if current_device:
+            for i in range(self.device_combo.count()):
+                if self.device_combo.itemData(i) == current_device:
+                    self.device_combo.setCurrentIndex(i)
+                    break
     
     def populate_processing_modes(self):
         """Populate the processing modes combo box"""
@@ -738,7 +883,7 @@ class MainWindow(QMainWindow):
         for mode in modes:
             self.mode_combo.addItem(mode["name"], mode["id"])
         
-        # Set "Basic Cleanup" as default
+        # Always set "Basic Cleanup" as default regardless of last used mode
         basic_cleanup_index = -1
         for i in range(self.mode_combo.count()):
             if self.mode_combo.itemData(i) == "basic_cleanup":
@@ -1123,7 +1268,7 @@ class MainWindow(QMainWindow):
             self.update_recording_time()
             self.transcribe_button.setEnabled(False)
             self.transcribe_process_button.setEnabled(False)
-            self.refresh_audio_devices_button.setEnabled(True)
+            self.refresh_audio_devices()
             
             # Clear transcription
             self.transcribed_text.setPlainText("")
@@ -1142,7 +1287,7 @@ class MainWindow(QMainWindow):
                 self.record_button.setToolTip("Start Recording")
                 self.pause_button.setToolTip("Pause Recording")
                 self.pause_button.setEnabled(False)
-                self.refresh_audio_devices_button.setEnabled(True)
+                self.refresh_audio_devices()
             
             QMessageBox.information(self, "Success", "All data has been cleared.")
     
@@ -1177,13 +1322,3 @@ class MainWindow(QMainWindow):
     def show_system_prompts_tab(self):
         """Show the system prompts tab"""
         self.tab_widget.setCurrentIndex(2)
-    
-    def sanitize_filename(self, title):
-        """Sanitize a title to use as a filename"""
-        # Remove special characters and spaces
-        sanitized_title = title.replace(" ", "_").replace("/", "_").replace("\\", "_")
-        
-        # Remove non-alphanumeric characters
-        sanitized_title = "".join(char for char in sanitized_title if char.isalnum() or char == "_")
-        
-        return sanitized_title
