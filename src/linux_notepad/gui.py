@@ -215,9 +215,21 @@ class MainWindow(QMainWindow):
         self.device_combo.setMinimumWidth(300)
         device_layout.addWidget(self.device_combo, 1)
         
+        # Add buttons in a horizontal layout
+        device_buttons_layout = QHBoxLayout()
+        
+        # Refresh button
         refresh_button = QPushButton("Refresh")
         refresh_button.clicked.connect(self.refresh_audio_devices)
-        device_layout.addWidget(refresh_button)
+        device_buttons_layout.addWidget(refresh_button)
+        
+        # Set as default button
+        set_default_button = QPushButton("Set as Default")
+        set_default_button.setToolTip("Set the current audio device as the default")
+        set_default_button.clicked.connect(self.set_default_audio_device)
+        device_buttons_layout.addWidget(set_default_button)
+        
+        device_layout.addLayout(device_buttons_layout)
         
         left_column.addLayout(device_layout)
         
@@ -398,6 +410,25 @@ class MainWindow(QMainWindow):
         self.save_api_settings_button.clicked.connect(self.save_api_settings)
         api_layout.addRow("", self.save_api_settings_button)
         
+        # Audio device settings
+        audio_group = QGroupBox("Audio Device Settings")
+        audio_layout = QFormLayout(audio_group)
+        
+        # Audio device selection in settings
+        device_settings_layout = QHBoxLayout()
+        self.settings_device_combo = QComboBox()
+        device_settings_layout.addWidget(self.settings_device_combo, 1)
+        
+        refresh_settings_button = QPushButton("Refresh")
+        refresh_settings_button.clicked.connect(self.refresh_settings_audio_devices)
+        device_settings_layout.addWidget(refresh_settings_button)
+        
+        audio_layout.addRow("Default Audio Device:", device_settings_layout)
+        
+        self.save_audio_settings_button = QPushButton("Save Default Audio Device")
+        self.save_audio_settings_button.clicked.connect(self.save_default_audio_device)
+        audio_layout.addRow("", self.save_audio_settings_button)
+        
         # Output directory settings
         output_group = QGroupBox("Output Settings")
         output_layout = QFormLayout(output_group)
@@ -419,6 +450,7 @@ class MainWindow(QMainWindow):
         
         # Add all sections to settings layout
         layout.addWidget(api_group)
+        layout.addWidget(audio_group)
         layout.addWidget(output_group)
         layout.addStretch()
     
@@ -840,15 +872,23 @@ class MainWindow(QMainWindow):
         output_dir = self.config.get("output_directory", "")
         self.output_dir_edit.setText(output_dir)
         
-        # Load audio device
+        # Load audio devices for both combos
         self.refresh_audio_devices()
-        device_index_str = self.config.get("audio_device", "")
+        self.populate_settings_audio_devices()
+        
+        # Load default audio device
+        device_index_str = self.config.get("default_audio_device", "")
         if device_index_str and device_index_str.isdigit():
             device_index = int(device_index_str)
-            # Find the device in the combo box
+            # Find the device in both combo boxes
             for i in range(self.device_combo.count()):
                 if self.device_combo.itemData(i) == device_index:
                     self.device_combo.setCurrentIndex(i)
+                    break
+            
+            for i in range(self.settings_device_combo.count()):
+                if self.settings_device_combo.itemData(i) == device_index:
+                    self.settings_device_combo.setCurrentIndex(i)
                     break
         
         # Always use basic_cleanup as default processing mode
@@ -921,7 +961,7 @@ class MainWindow(QMainWindow):
                 self.device_combo.setEnabled(False)
                 
                 # Save selected device to config
-                self.config.set("audio_device", str(device_index))
+                self.config.set("default_audio_device", str(device_index))
                 
                 # Start timer
                 self.recording_timer.start(1000)
@@ -1319,6 +1359,52 @@ class MainWindow(QMainWindow):
                 # Show confirmation
                 self.statusBar().showMessage("Recording cleared", 3000)
     
+    def set_default_audio_device(self):
+        """Set the current audio device as the default"""
+        current_device_index = self.device_combo.currentData()
+        if current_device_index is not None:
+            self.config.set("default_audio_device", str(current_device_index))
+            QMessageBox.information(self, "Success", "Default audio device set successfully.")
+    
     def show_system_prompts_tab(self):
         """Show the system prompts tab"""
         self.tab_widget.setCurrentIndex(2)
+    
+    def refresh_settings_audio_devices(self):
+        """Refresh the list of audio devices in the settings tab"""
+        # Get current device if selected
+        current_device = None
+        if self.settings_device_combo.currentIndex() >= 0:
+            current_device = self.settings_device_combo.currentData()
+        
+        # Populate devices
+        self.populate_settings_audio_devices()
+        
+        # Try to reselect the previous device
+        if current_device is not None:
+            for i in range(self.settings_device_combo.count()):
+                if self.settings_device_combo.itemData(i) == current_device:
+                    self.settings_device_combo.setCurrentIndex(i)
+                    break
+    
+    def populate_settings_audio_devices(self):
+        """Populate the list of audio devices in the settings tab"""
+        self.settings_device_combo.clear()
+        
+        devices = self.audio_manager.get_devices()
+        for device in devices:
+            self.settings_device_combo.addItem(f"{device['name']} ({device['channels']} ch, {device['sample_rate']} Hz)", device['index'])
+    
+    def save_default_audio_device(self):
+        """Save the selected audio device as the default from the settings tab"""
+        current_device_index = self.settings_device_combo.currentData()
+        if current_device_index is not None:
+            self.config.set("default_audio_device", str(current_device_index))
+            
+            # Also update the device in the main tab
+            for i in range(self.device_combo.count()):
+                if self.device_combo.itemData(i) == current_device_index:
+                    self.device_combo.setCurrentIndex(i)
+                    break
+            
+            QMessageBox.information(self, "Success", "Default audio device saved successfully.")

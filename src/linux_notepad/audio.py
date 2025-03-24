@@ -64,6 +64,25 @@ class AudioManager:
     
     def get_default_device(self):
         """Get default audio input device"""
+        # First check if we have a configured default device
+        device_index_str = self.config.get('default_audio_device')
+        if device_index_str and device_index_str.isdigit():
+            device_index = int(device_index_str)
+            try:
+                device_info = self.pyaudio.get_device_info_by_index(device_index)
+                # Make sure it's an input device
+                if device_info['maxInputChannels'] > 0:
+                    return {
+                        'index': device_index,
+                        'name': device_info['name'],
+                        'channels': device_info['maxInputChannels'],
+                        'sample_rate': int(device_info['defaultSampleRate'])
+                    }
+            except:
+                # If the saved device is no longer available, fall back to system default
+                pass
+                
+        # Fall back to system default device
         try:
             default_device = self.pyaudio.get_default_input_device_info()
             return {
@@ -86,7 +105,7 @@ class AudioManager:
         
         # If no device index is provided, use the one from config
         if device_index is None:
-            device_index_str = self.config.get('audio_device')
+            device_index_str = self.config.get('default_audio_device')
             if device_index_str and device_index_str.isdigit():
                 device_index = int(device_index_str)
             else:

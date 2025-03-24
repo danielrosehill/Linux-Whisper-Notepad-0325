@@ -17,7 +17,8 @@ class Config:
         
         # Default configuration
         self.default_config = {
-            "audio_device": "",
+            "audio_device": "",  # Keeping for backwards compatibility
+            "default_audio_device": "",  # New setting for default audio device
             "openai_api_key": "",
             "output_directory": os.path.join(Path.home(), "Documents"),
             "last_used_mode": "basic_cleanup",
