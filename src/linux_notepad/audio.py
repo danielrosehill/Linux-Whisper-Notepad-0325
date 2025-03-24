@@ -229,6 +229,14 @@ class AudioManager:
     
     def clear_recording(self):
         """Clear recorded audio data"""
+        # Make sure to stop any active stream before clearing
+        if self.stream and self.stream.is_active():
+            self.stream.stop_stream()
+            self.stream.close()
+            self.stream = None
+            
+        self.is_recording = False
+        self.is_paused = False
         self.frames = []
         self.current_chunk_frames = []
         self.current_chunk_duration = 0

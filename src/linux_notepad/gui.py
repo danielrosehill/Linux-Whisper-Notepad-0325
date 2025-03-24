@@ -831,8 +831,7 @@ class MainWindow(QMainWindow):
         reply = QMessageBox.question(
             self, "Confirm Deletion",
             f"Are you sure you want to delete the prompt '{name}'?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
+            QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.No
         )
         
         if reply == QMessageBox.StandardButton.Yes:
@@ -1007,11 +1006,17 @@ class MainWindow(QMainWindow):
                 if self.audio_manager.pause_recording():
                     self.pause_button.setToolTip("Resume")
                     self.pause_button.setIcon(QIcon.fromTheme("media-playback-start"))
+                    self.statusBar().showMessage("Recording paused", 2000)
+                    # Stop the timer while paused
+                    self.recording_timer.stop()
             else:
                 # Resume recording
                 if self.audio_manager.resume_recording():
                     self.pause_button.setToolTip("Pause")
                     self.pause_button.setIcon(QIcon.fromTheme("media-playback-pause"))
+                    self.statusBar().showMessage("Recording resumed", 2000)
+                    # Restart the timer
+                    self.recording_timer.start(1000)  # 1 second interval
     
     def update_recording_time(self):
         """Update recording time display"""
@@ -1297,8 +1302,7 @@ class MainWindow(QMainWindow):
         reply = QMessageBox.question(
             self, "Clear All", 
             "Are you sure you want to clear all data? This will reset the audio recording, transcription, and processed text.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
+            QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.No
         )
         
         if reply == QMessageBox.StandardButton.Yes:
@@ -1339,11 +1343,10 @@ class MainWindow(QMainWindow):
                 self,
                 "Clear Recording",
                 "Are you sure you want to clear the current recording? This cannot be undone.",
-                QMessageBox.Yes | QMessageBox.No,
-                QMessageBox.No
+                QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.No
             )
             
-            if reply == QMessageBox.Yes:
+            if reply == QMessageBox.StandardButton.Yes:
                 # Clear recording
                 self.audio_manager.clear_recording()
                 
