@@ -1,6 +1,6 @@
 # Linux Whisper Notepad
-
-![alt text](screenshots/v1/5.png)
+ 
+![alt text](screenshots/v2/image.png)
 
 A notepad and text conversion application for Linux with speech-to-text processing and text refinement capabilities using OpenAI APIs.
 
@@ -21,6 +21,15 @@ The primary use cases for this application include:
 - Capturing meeting notes or lecture content
 - Creating to-do lists through voice dictation
 - Any scenario where voice input provides a faster interface for capturing text than typing
+
+# V2 Updates
+
+- Editable system prompts  
+- Condensed layout with UI optimisations  
+
+![alt text](screenshots/v2/1.png)
+
+![alt text](screenshots/v2/2.png)
 
 ## Screenshots
 
@@ -63,6 +72,9 @@ The utility uses Open AI to automatically generate a suggested title for the not
   - Meeting minutes formatting
   - Bullet point summary
   - Technical documentation formatting
+- Custom system prompts creation and management
+- One-click transcription and processing
+- Copy to clipboard functionality for both transcribed and processed text
 - Save processed text as markdown files
 - Persistent configuration storage
 
@@ -111,18 +123,28 @@ The utility uses Open AI to automatically generate a suggested title for the not
 
 2. **Transcription**:
    - After recording, click "Transcribe Audio" to convert speech to text
+   - Alternatively, use "Transcribe and Process" to perform both steps at once
    - Requires an OpenAI API key (set in Settings tab)
+   - Use the "Copy to Clipboard" button to copy the transcribed text
 
 3. **Text Processing**:
    - Select a processing mode from the dropdown
    - Click "Process Text" to refine the transcribed text
    - The processed text will appear in the text area below
+   - Use the "Copy to Clipboard" button to copy the processed text
 
 4. **Saving**:
    - A suggested filename will be generated based on the content
    - You can edit the filename if desired
    - Click "Save Text" to save the processed text as a markdown file
    - Files are saved to the configured output directory
+
+5. **Custom System Prompts**:
+   - Navigate to Settings > System Prompts
+   - Create, edit, or delete custom processing prompts
+   - Custom prompts appear in the processing mode dropdown in alphabetical order
+   - Default prompts can be edited but not deleted
+   - Reset to defaults option is available if needed
 
 ## Configuration
 
@@ -131,6 +153,8 @@ All settings are stored in `~/.config/linux-whisper-notepad/settings.json` and i
 - Default audio device
 - Output directory for saved files
 - Last used processing mode
+
+Custom system prompts are stored in `~/.config/linux-whisper-notepad/custom_prompts.json`.
 
 ## Troubleshooting
 

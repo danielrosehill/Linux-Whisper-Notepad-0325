@@ -9,10 +9,12 @@ from pathlib import Path
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QComboBox, QTextEdit, QLineEdit, QFileDialog, QTabWidget, QGroupBox,
-    QFormLayout, QMessageBox, QProgressBar, QSplitter, QCheckBox
+    QFormLayout, QMessageBox, QProgressBar, QSplitter, QCheckBox,
+    QListWidget, QListWidgetItem, QDialog, QDialogButtonBox, QInputDialog, QApplication
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QThread
-from PyQt6.QtGui import QIcon, QFont
+from PyQt6.QtGui import QIcon, QFont, QClipboard
+from datetime import datetime
 
 from .config import Config
 from .audio import AudioManager
@@ -20,8 +22,8 @@ from .openai_api import OpenAIManager
 
 class TranscriptionWorker(QThread):
     """Worker thread for audio transcription"""
-    finished = pyqtSignal(dict)
-    progress = pyqtSignal(int)  # Progress signal (0-100)
+    progress = pyqtSignal(int)
+    finished = pyqtSignal(dict)  # Ensure we always emit a dict
     
     def __init__(self, openai_manager, audio_file_path):
         super().__init__()
@@ -29,15 +31,27 @@ class TranscriptionWorker(QThread):
         self.audio_file_path = audio_file_path
     
     def run(self):
-        """Run transcription in background thread"""
-        # Emit initial progress
-        self.progress.emit(10)
-        
-        result = self.openai_manager.transcribe_audio(self.audio_file_path)
-        
-        # Emit final progress
-        self.progress.emit(100)
-        self.finished.emit(result)
+        """Run the transcription process"""
+        try:
+            # Report progress
+            self.progress.emit(10)
+            
+            # Transcribe audio
+            result = self.openai_manager.transcribe_audio(self.audio_file_path)
+            
+            # Ensure result is a properly formatted dictionary
+            if not isinstance(result, dict):
+                result = {"success": False, "error": "Invalid result format", "text": ""}
+            
+            # Report progress
+            self.progress.emit(100)
+            
+            # Emit result
+            self.finished.emit(result)
+        except Exception as e:
+            # Handle any exceptions
+            error_result = {"success": False, "error": str(e), "text": ""}
+            self.finished.emit(error_result)
 
 class ProcessingWorker(QThread):
     """Worker thread for text processing"""
@@ -72,18 +86,23 @@ class MainWindow(QMainWindow):
         self.audio_manager = AudioManager(self.config)
         self.openai_manager = OpenAIManager(self.config)
         
+        # Create the transcribed_text widget early to ensure it's available
+        self.transcribed_text = QTextEdit()
+        self.transcribed_text.setReadOnly(True)
+        self.transcribed_text.setMinimumHeight(200)
+        self.transcribed_text.setPlaceholderText("Transcribed text will appear here")
+        
+        # Initialize state variables
+        self.recording_time = 0
+        self.processed_text = ""
+        self.suggested_filename = ""
+        
         # Set up the UI
         self.init_ui()
         
         # Set up timers
         self.recording_timer = QTimer()
         self.recording_timer.timeout.connect(self.update_recording_time)
-        
-        # Initialize state
-        self.recording_time = 0
-        self.transcribed_text = ""
-        self.processed_text = ""
-        self.suggested_filename = ""
         
         # Load configuration
         self.load_config()
@@ -98,15 +117,23 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central_widget)
         
         main_layout = QVBoxLayout(central_widget)
+        main_layout.setSpacing(8)  # Reduce spacing between elements
         
         # Add Clear All button at the top
         clear_all_layout = QHBoxLayout()
         self.clear_all_button = QPushButton("Clear All")
-        self.clear_all_button.setStyleSheet("background-color: #f44336; color: white; font-weight: bold;")
+        self.clear_all_button.setStyleSheet("background-color: #1565C0; color: white; font-weight: bold;")
         self.clear_all_button.clicked.connect(self.clear_all)
         clear_all_layout.addStretch()
         clear_all_layout.addWidget(self.clear_all_button)
         main_layout.addLayout(clear_all_layout)
+        
+        # Add prominent recording time display at the top
+        self.time_display = QLabel("00:00")
+        self.time_display.setStyleSheet("background-color: #1565C0; color: white; font-weight: bold; font-size: 24px; padding: 5px 15px; border-radius: 5px;")
+        self.time_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.time_display.setFixedWidth(120)
+        main_layout.addWidget(self.time_display, 0, Qt.AlignmentFlag.AlignCenter)
         
         # Create tab widget for main functionality and settings
         self.tab_widget = QTabWidget()
@@ -122,139 +149,215 @@ class MainWindow(QMainWindow):
         settings_tab_layout = QVBoxLayout(settings_tab)
         self.tab_widget.addTab(settings_tab, "Settings")
         
+        # Create system prompts tab
+        prompts_tab = QWidget()
+        prompts_tab_layout = QVBoxLayout(prompts_tab)
+        self.tab_widget.addTab(prompts_tab, "System Prompts")
+        
         # Set up main tab UI
         self.setup_main_tab(main_tab_layout)
         
         # Set up settings tab UI
         self.setup_settings_tab(settings_tab_layout)
+        
+        # Set up system prompts tab UI
+        self.setup_system_prompts_tab(prompts_tab_layout)
+        
+        # Populate processing modes
+        self.populate_processing_modes()
     
     def setup_main_tab(self, layout):
         """Set up the main tab UI"""
-        # Audio recording section
-        recording_group = QGroupBox("1. Audio Recording")
-        recording_layout = QVBoxLayout(recording_group)
+        # Create a horizontal layout for the two columns
+        columns_layout = QHBoxLayout()
+        
+        # Create left column layout
+        left_column = QVBoxLayout()
+        left_column.setContentsMargins(0, 0, 10, 0)  # Add right margin for spacing between columns
+        
+        # Create right column layout
+        right_column = QVBoxLayout()
+        right_column.setContentsMargins(10, 0, 0, 0)  # Add left margin for spacing between columns
+        
+        # Add columns to the main layout
+        columns_layout.addLayout(left_column, 1)  # 1 is the stretch factor
+        columns_layout.addLayout(right_column, 1)
+        layout.addLayout(columns_layout)
+        
+        # ===== LEFT COLUMN =====
+        # Record section
+        record_header = QLabel("RECORD")
+        record_header.setStyleSheet("font-size: 15px; font-weight: bold; color: white; background-color: rgba(33, 150, 243, 0.9); padding: 5px 10px; border-radius: 2px;")
+        left_column.addWidget(record_header)
+        
+        # Add description text
+        record_description = QLabel("Record audio from your microphone to transcribe into text.")
+        record_description.setStyleSheet("font-style: italic; color: #666; margin-bottom: 4px; font-size: 11px;")
+        record_description.setWordWrap(True)
+        left_column.addWidget(record_description)
         
         # Audio device selection
         device_layout = QHBoxLayout()
-        device_layout.addWidget(QLabel("Audio Source:"))
+        device_label = QLabel("Audio Device:")
+        device_layout.addWidget(device_label)
         
         self.device_combo = QComboBox()
         self.device_combo.setMinimumWidth(300)
-        device_layout.addWidget(self.device_combo)
+        device_layout.addWidget(self.device_combo, 1)
         
         refresh_button = QPushButton("Refresh")
-        refresh_button.clicked.connect(self.refresh_devices)
+        refresh_button.clicked.connect(self.populate_audio_devices)
         device_layout.addWidget(refresh_button)
         
-        device_layout.addStretch()
-        recording_layout.addLayout(device_layout)
+        left_column.addLayout(device_layout)
         
         # Recording controls
         controls_layout = QHBoxLayout()
         
-        self.record_button = QPushButton("Start Recording")
-        self.record_button.clicked.connect(self.toggle_recording)
+        # Start recording button
+        self.record_button = QPushButton()
+        self.record_button.setIcon(QIcon.fromTheme("media-record", QIcon.fromTheme("media-playback-start")))
+        self.record_button.setToolTip("Start Recording")
+        self.record_button.clicked.connect(self.start_recording)
         controls_layout.addWidget(self.record_button)
         
-        self.pause_button = QPushButton("Pause")
+        # Stop recording button
+        self.stop_button = QPushButton()
+        self.stop_button.setIcon(QIcon.fromTheme("media-playback-stop"))
+        self.stop_button.setToolTip("Stop Recording")
+        self.stop_button.clicked.connect(self.stop_recording)
+        self.stop_button.setEnabled(False)
+        controls_layout.addWidget(self.stop_button)
+        
+        # Pause recording button
+        self.pause_button = QPushButton()
+        self.pause_button.setIcon(QIcon.fromTheme("media-playback-pause"))
+        self.pause_button.setToolTip("Pause")
         self.pause_button.clicked.connect(self.toggle_pause)
         self.pause_button.setEnabled(False)
         controls_layout.addWidget(self.pause_button)
         
-        self.clear_button = QPushButton("Clear")
+        # Clear recording button
+        self.clear_button = QPushButton()
+        self.clear_button.setIcon(QIcon.fromTheme("edit-clear", QIcon.fromTheme("edit-delete")))
+        self.clear_button.setToolTip("Clear Recording")
         self.clear_button.clicked.connect(self.clear_recording)
         self.clear_button.setEnabled(False)
         controls_layout.addWidget(self.clear_button)
         
-        controls_layout.addStretch()
+        left_column.addLayout(controls_layout)
         
-        self.time_label = QLabel("00:00")
-        self.time_label.setStyleSheet("font-size: 16px; font-weight: bold;")
-        controls_layout.addWidget(self.time_label)
+        # Transcription progress bar
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setRange(0, 100)
+        self.progress_bar.setValue(0)
+        self.progress_bar.setFormat("%p%")
+        self.progress_bar.setVisible(False)  # Hide initially
+        left_column.addWidget(self.progress_bar)
         
-        recording_layout.addLayout(controls_layout)
+        # Transcribed text section
+        transcribe_header = QLabel("TRANSCRIBE")
+        transcribe_header.setStyleSheet("font-size: 15px; font-weight: bold; color: white; background-color: rgba(76, 175, 80, 0.9); padding: 5px 10px; border-radius: 2px; margin-top: 10px;")
+        left_column.addWidget(transcribe_header)
         
-        # Transcription section
-        transcription_group = QGroupBox("2. Transcription")
-        transcription_layout = QVBoxLayout(transcription_group)
+        # Add description text
+        transcribe_description = QLabel("Text after transcription by Whisper API.")
+        transcribe_description.setStyleSheet("font-style: italic; color: #666; margin-bottom: 4px; font-size: 11px;")
+        transcribe_description.setWordWrap(True)
+        left_column.addWidget(transcribe_description)
         
-        transcribe_controls = QHBoxLayout()
+        # Transcription buttons
+        transcribe_buttons_layout = QHBoxLayout()
         
         self.transcribe_button = QPushButton("Transcribe Audio")
         self.transcribe_button.clicked.connect(self.transcribe_audio)
         self.transcribe_button.setEnabled(False)
-        transcribe_controls.addWidget(self.transcribe_button)
+        transcribe_buttons_layout.addWidget(self.transcribe_button)
         
-        self.clear_transcription_button = QPushButton("Clear Transcription")
-        self.clear_transcription_button.clicked.connect(self.clear_transcription)
-        self.clear_transcription_button.setEnabled(False)
-        transcribe_controls.addWidget(self.clear_transcription_button)
+        self.transcribe_process_button = QPushButton("Transcribe and Process")
+        self.transcribe_process_button.clicked.connect(self.transcribe_and_process)
+        self.transcribe_process_button.setEnabled(False)
+        transcribe_buttons_layout.addWidget(self.transcribe_process_button)
         
-        transcribe_controls.addStretch()
-        transcription_layout.addLayout(transcribe_controls)
+        left_column.addLayout(transcribe_buttons_layout)
         
-        self.transcription_progress = QProgressBar()
-        self.transcription_progress.setVisible(False)
-        transcription_layout.addWidget(self.transcription_progress)
+        # Transcribed text display
+        left_column.addWidget(self.transcribed_text)
         
-        self.transcribed_text_edit = QTextEdit()
-        self.transcribed_text_edit.setPlaceholderText("Transcribed text will appear here...")
-        transcription_layout.addWidget(self.transcribed_text_edit)
+        # ===== RIGHT COLUMN =====
+        # Process section
+        process_header = QLabel("PROCESS")
+        process_header.setStyleSheet("font-size: 15px; font-weight: bold; color: white; background-color: rgba(33, 150, 243, 0.9); padding: 5px 10px; border-radius: 2px;")
+        right_column.addWidget(process_header)
         
-        # Text processing section
-        processing_group = QGroupBox("3. Text Processing")
-        processing_layout = QVBoxLayout(processing_group)
+        # Add description text
+        process_description = QLabel("Choose a formatting instruction to improve and process the dictated text. If you don't have a specific format in mind, using the default basic cleanup setting is recommended.")
+        process_description.setStyleSheet("font-style: italic; color: #666; margin-bottom: 4px; font-size: 11px;")
+        process_description.setWordWrap(True)
+        right_column.addWidget(process_description)
         
+        # Processing mode selection
         mode_layout = QHBoxLayout()
-        mode_layout.addWidget(QLabel("Processing Mode:"))
+        mode_label = QLabel("Processing Mode:")
+        mode_layout.addWidget(mode_label)
         
         self.mode_combo = QComboBox()
-        self.populate_processing_modes()
-        mode_layout.addWidget(self.mode_combo)
+        mode_layout.addWidget(self.mode_combo, 1)
         
+        right_column.addLayout(mode_layout)
+        
+        # Process button
+        process_button_layout = QHBoxLayout()
         self.process_button = QPushButton("Process Text")
         self.process_button.clicked.connect(self.process_text)
         self.process_button.setEnabled(False)
-        mode_layout.addWidget(self.process_button)
+        process_button_layout.addWidget(self.process_button)
+        process_button_layout.addStretch()
+        right_column.addLayout(process_button_layout)
         
-        self.clear_processed_button = QPushButton("Clear Processed")
-        self.clear_processed_button.clicked.connect(self.clear_processed_text)
-        self.clear_processed_button.setEnabled(False)
-        mode_layout.addWidget(self.clear_processed_button)
-        
-        processing_layout.addLayout(mode_layout)
-        
-        self.processing_progress = QProgressBar()
-        self.processing_progress.setVisible(False)
-        processing_layout.addWidget(self.processing_progress)
-        
-        self.processed_text_edit = QTextEdit()
-        self.processed_text_edit.setPlaceholderText("Processed text will appear here...")
-        processing_layout.addWidget(self.processed_text_edit)
+        # Processed text display
+        self.processed_text = QTextEdit()
+        self.processed_text.setReadOnly(True)
+        self.processed_text.setMinimumHeight(200)
+        self.processed_text.setPlaceholderText("Processed text will appear here")
+        right_column.addWidget(self.processed_text)
         
         # Save section
-        save_group = QGroupBox("4. Save")
-        save_layout = QVBoxLayout(save_group)
+        save_header = QLabel("SAVE")
+        save_header.setStyleSheet("font-size: 15px; font-weight: bold; color: white; background-color: rgba(33, 150, 243, 0.9); padding: 5px 10px; border-radius: 2px; margin-top: 10px;")
+        right_column.addWidget(save_header)
         
+        # Add description text
+        save_description = QLabel("Save your processed text to a file.")
+        save_description.setStyleSheet("font-style: italic; color: #666; margin-bottom: 4px; font-size: 11px;")
+        save_description.setWordWrap(True)
+        right_column.addWidget(save_description)
+        
+        # Auto-generated filename
         filename_layout = QHBoxLayout()
-        filename_layout.addWidget(QLabel("Filename:"))
+        filename_label = QLabel("Filename:")
+        filename_layout.addWidget(filename_label)
         
-        self.filename_edit = QLineEdit()
-        self.filename_edit.setPlaceholderText("Suggested filename will appear here...")
-        filename_layout.addWidget(self.filename_edit)
+        self.filename_display = QLineEdit()
+        self.filename_display.setPlaceholderText("Autogenerated with processing or type manually")
+        filename_layout.addWidget(self.filename_display, 1)
         
+        right_column.addLayout(filename_layout)
+        
+        # Save button
+        save_button_layout = QHBoxLayout()
         self.save_button = QPushButton("Save Text")
         self.save_button.clicked.connect(self.save_text)
         self.save_button.setEnabled(False)
-        filename_layout.addWidget(self.save_button)
+        save_button_layout.addWidget(self.save_button)
+        save_button_layout.addStretch()
+        right_column.addLayout(save_button_layout)
         
-        save_layout.addLayout(filename_layout)
+        # Populate audio devices
+        self.populate_audio_devices()
         
-        # Add all sections to main layout
-        layout.addWidget(recording_group)
-        layout.addWidget(transcription_group)
-        layout.addWidget(processing_group)
-        layout.addWidget(save_group)
+        # Populate processing modes
+        self.populate_processing_modes()
     
     def setup_settings_tab(self, layout):
         """Set up the settings tab UI"""
@@ -305,6 +408,273 @@ class MainWindow(QMainWindow):
         layout.addWidget(output_group)
         layout.addStretch()
     
+    def setup_system_prompts_tab(self, layout):
+        """Set up the system prompts tab UI"""
+        # Instructions
+        instructions_label = QLabel(
+            "Create and edit system prompts for text processing. "
+            "Each prompt defines how your text will be processed."
+        )
+        instructions_label.setWordWrap(True)
+        layout.addWidget(instructions_label)
+        
+        # Prompts list
+        prompts_group = QGroupBox("Available Prompts")
+        prompts_layout = QVBoxLayout(prompts_group)
+        
+        self.prompts_list = QListWidget()
+        self.prompts_list.currentItemChanged.connect(self.on_prompt_selected)
+        prompts_layout.addWidget(self.prompts_list)
+        
+        # Buttons for managing prompts
+        buttons_layout = QHBoxLayout()
+        
+        self.add_prompt_button = QPushButton("Add New")
+        self.add_prompt_button.clicked.connect(self.add_new_prompt)
+        buttons_layout.addWidget(self.add_prompt_button)
+        
+        self.edit_prompt_button = QPushButton("Edit")
+        self.edit_prompt_button.clicked.connect(self.edit_prompt)
+        self.edit_prompt_button.setEnabled(False)
+        buttons_layout.addWidget(self.edit_prompt_button)
+        
+        self.delete_prompt_button = QPushButton("Delete")
+        self.delete_prompt_button.clicked.connect(self.delete_prompt)
+        self.delete_prompt_button.setEnabled(False)
+        buttons_layout.addWidget(self.delete_prompt_button)
+        
+        self.reset_prompts_button = QPushButton("Reset to Defaults")
+        self.reset_prompts_button.clicked.connect(self.reset_prompts)
+        buttons_layout.addWidget(self.reset_prompts_button)
+        
+        prompts_layout.addLayout(buttons_layout)
+        
+        # Prompt details
+        details_group = QGroupBox("Prompt Details")
+        details_layout = QVBoxLayout(details_group)
+        
+        self.prompt_text_edit = QTextEdit()
+        self.prompt_text_edit.setPlaceholderText("Select a prompt to view or edit its details...")
+        self.prompt_text_edit.setReadOnly(True)
+        details_layout.addWidget(self.prompt_text_edit)
+        
+        # Add all sections to layout
+        layout.addWidget(prompts_group)
+        layout.addWidget(details_group)
+        
+        # Populate prompts list
+        self.populate_prompts_list()
+    
+    def populate_prompts_list(self):
+        """Populate the prompts list with available prompts"""
+        self.prompts_list.clear()
+        
+        modes = self.openai_manager.get_available_modes()
+        for mode in modes:
+            item = QListWidgetItem(mode["name"])
+            item.setData(Qt.ItemDataRole.UserRole, mode["id"])
+            self.prompts_list.addItem(item)
+    
+    def on_prompt_selected(self, current, previous):
+        """Handle prompt selection"""
+        if current:
+            mode_id = current.data(Qt.ItemDataRole.UserRole)
+            prompt_text = self.openai_manager.get_prompt(mode_id)
+            self.prompt_text_edit.setText(prompt_text)
+            
+            # Enable edit/delete buttons
+            self.edit_prompt_button.setEnabled(True)
+            
+            # Only allow deletion of custom prompts
+            is_default = mode_id in self.openai_manager.DEFAULT_TEXT_PROCESSING_MODES
+            self.delete_prompt_button.setEnabled(not is_default)
+        else:
+            self.prompt_text_edit.clear()
+            self.edit_prompt_button.setEnabled(False)
+            self.delete_prompt_button.setEnabled(False)
+    
+    def add_new_prompt(self):
+        """Add a new custom prompt"""
+        # Get prompt name
+        name, ok = QInputDialog.getText(
+            self, "New Prompt", "Enter a name for the new prompt:"
+        )
+        
+        if ok and name:
+            # Generate mode_id from name
+            mode_id = name.lower().replace(" ", "_")
+            
+            # Check if mode_id already exists
+            modes = self.openai_manager.get_available_modes()
+            existing_ids = [mode["id"] for mode in modes]
+            
+            if mode_id in existing_ids:
+                QMessageBox.warning(
+                    self, "Duplicate Name", 
+                    f"A prompt with the name '{name}' already exists. Please choose a different name."
+                )
+                return
+            
+            # Create prompt edit dialog
+            dialog = QDialog(self)
+            dialog.setWindowTitle(f"Create Prompt: {name}")
+            dialog.setMinimumSize(600, 400)
+            
+            layout = QVBoxLayout(dialog)
+            
+            # Instructions
+            instructions = QLabel(
+                "Enter the system prompt that will be used for processing text. "
+                "This prompt should instruct the AI on how to transform the input text."
+            )
+            instructions.setWordWrap(True)
+            layout.addWidget(instructions)
+            
+            # Text edit for prompt
+            prompt_edit = QTextEdit()
+            prompt_edit.setPlaceholderText("Enter your system prompt here...")
+            layout.addWidget(prompt_edit)
+            
+            # Buttons
+            button_box = QDialogButtonBox(
+                QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+            )
+            button_box.accepted.connect(dialog.accept)
+            button_box.rejected.connect(dialog.reject)
+            layout.addWidget(button_box)
+            
+            # Show dialog
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                prompt_text = prompt_edit.toPlainText()
+                if prompt_text:
+                    # Add prompt
+                    self.openai_manager.add_custom_prompt(mode_id, name, prompt_text)
+                    
+                    # Refresh lists
+                    self.populate_prompts_list()
+                    self.populate_processing_modes()
+                    
+                    # Select the new prompt
+                    for i in range(self.prompts_list.count()):
+                        item = self.prompts_list.item(i)
+                        if item.data(Qt.ItemDataRole.UserRole) == mode_id:
+                            self.prompts_list.setCurrentItem(item)
+                            break
+                else:
+                    QMessageBox.warning(self, "Empty Prompt", "The prompt cannot be empty.")
+    
+    def edit_prompt(self):
+        """Edit the selected prompt"""
+        current_item = self.prompts_list.currentItem()
+        if not current_item:
+            return
+        
+        mode_id = current_item.data(Qt.ItemDataRole.UserRole)
+        name = current_item.text()
+        current_prompt = self.openai_manager.get_prompt(mode_id)
+        
+        # Create prompt edit dialog
+        dialog = QDialog(self)
+        dialog.setWindowTitle(f"Edit Prompt: {name}")
+        dialog.setMinimumSize(600, 400)
+        
+        layout = QVBoxLayout(dialog)
+        
+        # Instructions
+        instructions = QLabel(
+            "Edit the system prompt that will be used for processing text. "
+            "This prompt should instruct the AI on how to transform the input text."
+        )
+        instructions.setWordWrap(True)
+        layout.addWidget(instructions)
+        
+        # Text edit for prompt
+        prompt_edit = QTextEdit()
+        prompt_edit.setText(current_prompt)
+        layout.addWidget(prompt_edit)
+        
+        # Buttons
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        button_box.accepted.connect(dialog.accept)
+        button_box.rejected.connect(dialog.reject)
+        layout.addWidget(button_box)
+        
+        # Show dialog
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            prompt_text = prompt_edit.toPlainText()
+            if prompt_text:
+                # Update prompt
+                self.openai_manager.add_custom_prompt(mode_id, name, prompt_text)
+                
+                # Refresh prompt text
+                self.prompt_text_edit.setText(prompt_text)
+            else:
+                QMessageBox.warning(self, "Empty Prompt", "The prompt cannot be empty.")
+    
+    def delete_prompt(self):
+        """Delete the selected prompt"""
+        current_item = self.prompts_list.currentItem()
+        if not current_item:
+            return
+        
+        mode_id = current_item.data(Qt.ItemDataRole.UserRole)
+        name = current_item.text()
+        
+        # Confirm deletion
+        reply = QMessageBox.question(
+            self, "Confirm Deletion",
+            f"Are you sure you want to delete the prompt '{name}'?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            # Delete prompt
+            if self.openai_manager.delete_custom_prompt(mode_id):
+                # Refresh lists
+                self.populate_prompts_list()
+                self.populate_processing_modes()
+                
+                # Clear prompt text
+                self.prompt_text_edit.clear()
+            else:
+                QMessageBox.warning(
+                    self, "Deletion Failed", 
+                    "Could not delete the prompt. Default prompts cannot be deleted."
+                )
+    
+    def reset_prompts(self):
+        """Reset all prompts to defaults"""
+        # Confirm reset
+        reply = QMessageBox.question(
+            self, "Confirm Reset",
+            "Are you sure you want to reset all prompts to defaults? This will delete all custom prompts.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            # Reset prompts
+            if self.openai_manager.reset_to_defaults():
+                # Refresh lists
+                self.populate_prompts_list()
+                self.populate_processing_modes()
+                
+                # Clear prompt text
+                self.prompt_text_edit.clear()
+                
+                QMessageBox.information(
+                    self, "Reset Complete", 
+                    "All prompts have been reset to defaults."
+                )
+            else:
+                QMessageBox.warning(
+                    self, "Reset Failed", 
+                    "Could not reset prompts to defaults."
+                )
+    
     def load_config(self):
         """Load configuration and update UI"""
         # Load API key
@@ -328,7 +698,7 @@ class MainWindow(QMainWindow):
         self.output_dir_edit.setText(output_dir)
         
         # Load audio device
-        self.refresh_devices()
+        self.refresh_audio_devices()
         device_index_str = self.config.get("audio_device", "")
         if device_index_str and device_index_str.isdigit():
             device_index = int(device_index_str)
@@ -345,7 +715,7 @@ class MainWindow(QMainWindow):
                 self.mode_combo.setCurrentIndex(i)
                 break
     
-    def refresh_devices(self):
+    def refresh_audio_devices(self):
         """Refresh the list of audio devices"""
         self.device_combo.clear()
         
@@ -362,70 +732,115 @@ class MainWindow(QMainWindow):
     
     def populate_processing_modes(self):
         """Populate the processing modes combo box"""
+        self.mode_combo.clear()
+        
         modes = self.openai_manager.get_available_modes()
         for mode in modes:
             self.mode_combo.addItem(mode["name"], mode["id"])
+        
+        # Set "Basic Cleanup" as default
+        basic_cleanup_index = -1
+        for i in range(self.mode_combo.count()):
+            if self.mode_combo.itemData(i) == "basic_cleanup":
+                basic_cleanup_index = i
+                break
+        
+        if basic_cleanup_index >= 0:
+            self.mode_combo.setCurrentIndex(basic_cleanup_index)
     
-    def toggle_recording(self):
-        """Toggle audio recording"""
+    def populate_audio_devices(self):
+        """Populate the list of audio devices"""
+        self.device_combo.clear()
+        
+        devices = self.audio_manager.get_devices()
+        for device in devices:
+            self.device_combo.addItem(f"{device['name']} ({device['channels']} ch, {device['sample_rate']} Hz)", device['index'])
+        
+        # If no devices found, disable recording
+        if self.device_combo.count() == 0:
+            self.record_button.setEnabled(False)
+            QMessageBox.warning(self, "No Audio Devices", "No audio input devices found. Please connect a microphone.")
+        else:
+            self.record_button.setEnabled(True)
+    
+    def start_recording(self):
+        """Start audio recording"""
         if not self.audio_manager.is_recording:
             # Start recording
             device_index = self.device_combo.currentData()
             if self.audio_manager.start_recording(device_index):
-                self.record_button.setText("Stop Recording")
+                self.record_button.setEnabled(False)
+                self.stop_button.setEnabled(True)
                 self.pause_button.setEnabled(True)
-                self.clear_button.setEnabled(True)
+                self.clear_button.setEnabled(False)
                 self.device_combo.setEnabled(False)
                 
                 # Save selected device to config
                 self.config.set("audio_device", str(device_index))
                 
-                # Start recording timer
-                self.recording_time = 0
-                self.update_recording_time()
-                self.recording_timer.start(1000)  # Update every second
+                # Start timer
+                self.recording_timer.start(1000)
+            else:
+                QMessageBox.warning(self, "Error", "Failed to start recording. Please check your microphone.")
         else:
             # Stop recording
             if self.audio_manager.stop_recording():
-                self.record_button.setText("Start Recording")
-                self.pause_button.setText("Pause")
+                self.record_button.setEnabled(True)
+                self.stop_button.setEnabled(False)
                 self.pause_button.setEnabled(False)
+                self.clear_button.setEnabled(True)
                 self.device_combo.setEnabled(True)
                 self.recording_timer.stop()
                 
                 # Enable transcribe button if we have recorded audio
                 if self.audio_manager.get_recording_duration() > 0:
                     self.transcribe_button.setEnabled(True)
+                    self.transcribe_process_button.setEnabled(True)
+    
+    def stop_recording(self):
+        """Stop audio recording"""
+        if self.audio_manager.is_recording:
+            # Stop recording
+            if self.audio_manager.stop_recording():
+                self.record_button.setEnabled(True)
+                self.stop_button.setEnabled(False)
+                self.pause_button.setEnabled(False)
+                self.clear_button.setEnabled(True)
+                self.device_combo.setEnabled(True)
+                self.recording_timer.stop()
+                
+                # Enable transcribe button if we have recording
+                if self.audio_manager.get_recording_duration() > 0:
+                    self.transcribe_button.setEnabled(True)
+                    self.transcribe_process_button.setEnabled(True)
     
     def toggle_pause(self):
         """Toggle pause/resume recording"""
-        if not self.audio_manager.is_paused:
-            # Pause recording
-            if self.audio_manager.pause_recording():
-                self.pause_button.setText("Resume")
-                self.recording_timer.stop()
-        else:
-            # Resume recording
-            if self.audio_manager.resume_recording():
-                self.pause_button.setText("Pause")
-                self.recording_timer.start(1000)
-    
-    def clear_recording(self):
-        """Clear recorded audio"""
-        if self.audio_manager.clear_recording():
-            self.recording_time = 0
-            self.update_recording_time()
-            self.transcribe_button.setEnabled(False)
+        if self.audio_manager.is_recording:
+            if not self.audio_manager.is_paused:
+                # Pause recording
+                if self.audio_manager.pause_recording():
+                    self.pause_button.setToolTip("Resume")
+                    self.pause_button.setIcon(QIcon.fromTheme("media-playback-start"))
+            else:
+                # Resume recording
+                if self.audio_manager.resume_recording():
+                    self.pause_button.setToolTip("Pause")
+                    self.pause_button.setIcon(QIcon.fromTheme("media-playback-pause"))
     
     def update_recording_time(self):
         """Update recording time display"""
         self.recording_time += 1
         minutes = self.recording_time // 60
         seconds = self.recording_time % 60
-        self.time_label.setText(f"{minutes:02d}:{seconds:02d}")
+        self.time_display.setText(f"{minutes:02d}:{seconds:02d}")
     
     def transcribe_audio(self):
-        """Transcribe recorded audio"""
+        """Transcribe the recorded audio"""
+        if not self.audio_manager.has_recording():
+            QMessageBox.warning(self, "Error", "No audio data to transcribe.")
+            return
+            
         # Save audio to temporary file
         temp_file = self.audio_manager.save_to_temp_file()
         if not temp_file:
@@ -439,52 +854,27 @@ class MainWindow(QMainWindow):
             return
         
         # Show progress
-        self.transcription_progress.setVisible(True)
-        self.transcription_progress.setValue(0)
+        self.progress_bar.setVisible(True)
+        self.progress_bar.setValue(0)
         self.transcribe_button.setEnabled(False)
+        self.transcribe_process_button.setEnabled(False)
         
         # Start transcription in background thread
         self.transcription_worker = TranscriptionWorker(self.openai_manager, temp_file)
         self.transcription_worker.progress.connect(self.update_transcription_progress)
-        self.transcription_worker.finished.connect(self.handle_transcription_result)
+        self.transcription_worker.finished.connect(self._handle_transcription_result)
         self.transcription_worker.start()
     
-    def update_transcription_progress(self, value):
-        """Update transcription progress bar"""
-        self.transcription_progress.setValue(value)
-    
-    def handle_transcription_result(self, result):
-        """Handle transcription result"""
-        # Hide progress
-        self.transcription_progress.setVisible(False)
-        self.transcribe_button.setEnabled(True)
-        
-        if result.get("success", False):
-            # Update transcribed text
-            self.transcribed_text = result.get("text", "")
-            self.transcribed_text_edit.setText(self.transcribed_text)
+    def transcribe_and_process(self):
+        """Transcribe audio and then process the transcribed text"""
+        if not self.audio_manager.has_recording():
+            QMessageBox.warning(self, "Error", "No audio data to transcribe.")
+            return
             
-            # Enable processing button and clear button
-            self.process_button.setEnabled(True)
-            self.clear_transcription_button.setEnabled(True)
-        else:
-            # Show error message
-            error_message = result.get("error", "Unknown error")
-            QMessageBox.warning(self, "Transcription Error", f"Failed to transcribe audio: {error_message}")
-    
-    def clear_transcription(self):
-        """Clear transcribed text"""
-        self.transcribed_text = ""
-        self.transcribed_text_edit.clear()
-        self.process_button.setEnabled(False)
-        self.clear_transcription_button.setEnabled(False)
-    
-    def process_text(self):
-        """Process transcribed text"""
-        # Get text from transcription text edit
-        text = self.transcribed_text_edit.toPlainText()
-        if not text:
-            QMessageBox.warning(self, "Error", "No text to process.")
+        # Save audio to temporary file
+        temp_file = self.audio_manager.save_to_temp_file()
+        if not temp_file:
+            QMessageBox.warning(self, "Error", "No audio data to transcribe.")
             return
         
         # Check if API key is set
@@ -493,57 +883,150 @@ class MainWindow(QMainWindow):
             self.tab_widget.setCurrentIndex(1)  # Switch to settings tab
             return
         
-        # Get selected processing mode
-        mode = self.mode_combo.currentData()
-        
-        # Save selected mode to config
-        self.config.set("last_used_mode", mode)
-        
         # Show progress
-        self.processing_progress.setVisible(True)
-        self.processing_progress.setValue(0)
-        self.process_button.setEnabled(False)
+        self.progress_bar.setVisible(True)
+        self.progress_bar.setValue(0)
+        self.transcribe_button.setEnabled(False)
+        self.transcribe_process_button.setEnabled(False)
         
-        # Start processing in background thread
-        self.processing_worker = ProcessingWorker(self.openai_manager, text, mode)
-        self.processing_worker.progress.connect(self.update_processing_progress)
-        self.processing_worker.finished.connect(self.handle_processing_result)
-        self.processing_worker.start()
+        # Start transcription in background thread
+        self.transcription_worker = TranscriptionWorker(self.openai_manager, temp_file)
+        self.transcription_worker.progress.connect(self.update_transcription_progress)
+        self.transcription_worker.finished.connect(self._handle_transcribe_and_process_result)
+        self.transcription_worker.start()
     
-    def update_processing_progress(self, value):
-        """Update processing progress bar"""
-        self.processing_progress.setValue(value)
-    
-    def handle_processing_result(self, result):
-        """Handle text processing result"""
+    def _handle_transcribe_and_process_result(self, result):
+        """Handle transcription result and then process the text"""
         # Hide progress
-        self.processing_progress.setVisible(False)
-        self.process_button.setEnabled(True)
+        self.progress_bar.setVisible(False)
+        self.transcribe_button.setEnabled(True)
+        self.transcribe_process_button.setEnabled(True)
+        
+        # Safety check to ensure transcribed_text is properly initialized
+        if not hasattr(self.transcribed_text, 'setPlainText'):
+            print("Error: self.transcribed_text is not properly initialized as a QTextEdit")
+            QMessageBox.critical(self, "Application Error", "Internal error: Text widget not properly initialized")
+            return
+        
+        if isinstance(result, dict) and result.get("success", False):
+            # Update transcribed text
+            transcribed_text_content = result.get("text", "")
+            if transcribed_text_content:
+                self.transcribed_text.setPlainText(transcribed_text_content)
+                
+                # Process the transcribed text
+                self.process_text()
+            else:
+                QMessageBox.warning(self, "Transcription Error", "No text was transcribed from the audio.")
+                self.statusBar().showMessage("Transcription failed")
+        else:
+            # Show error message
+            error_message = result.get("error", "Unknown error") if isinstance(result, dict) else "Unknown error"
+            QMessageBox.warning(self, "Transcription Error", f"Failed to transcribe audio: {error_message}")
+            self.statusBar().showMessage("Transcription failed")
+    
+    def update_transcription_progress(self, value):
+        """Update transcription progress bar"""
+        self.progress_bar.setValue(value)
+    
+    def _handle_transcription_result(self, result):
+        """Handle the transcription result"""
+        # Hide progress
+        self.progress_bar.setVisible(False)
+        self.transcribe_button.setEnabled(True)
+        self.transcribe_process_button.setEnabled(True)
+        
+        # Safety check to ensure transcribed_text is properly initialized
+        if not hasattr(self.transcribed_text, 'setPlainText'):
+            print("Error: self.transcribed_text is not properly initialized as a QTextEdit")
+            QMessageBox.critical(self, "Application Error", "Internal error: Text widget not properly initialized")
+            return
+        
+        if isinstance(result, dict) and result.get("success", False):
+            # Update transcribed text
+            transcription_text_content = result.get("text", "")
+            if transcription_text_content:
+                self.transcribed_text.setPlainText(transcription_text_content)
+                
+                # Enable process button
+                self.process_button.setEnabled(True)
+                
+                # Update status
+                self.statusBar().showMessage("Transcription complete")
+            else:
+                QMessageBox.warning(self, "Transcription Error", "No text was transcribed from the audio.")
+                self.statusBar().showMessage("Transcription failed")
+        else:
+            # Show error message
+            error_message = result.get("error", "Unknown error") if isinstance(result, dict) else "Unknown error"
+            QMessageBox.warning(self, "Transcription Error", f"Failed to transcribe audio: {error_message}")
+            self.statusBar().showMessage("Transcription failed")
+    
+    def handle_transcription_result(self, result):
+        """Handle transcription result"""
+        # Hide progress
+        self.progress_bar.setVisible(False)
+        self.transcribe_button.setEnabled(True)
+        
+        # Safety check to ensure transcribed_text is properly initialized
+        if not hasattr(self.transcribed_text, 'setPlainText'):
+            print("Error: self.transcribed_text is not properly initialized as a QTextEdit")
+            QMessageBox.critical(self, "Application Error", "Internal error: Text widget not properly initialized")
+            return
         
         if result.get("success", False):
-            # Update processed text
-            self.processed_text = result.get("processed_text", "")
-            self.processed_text_edit.setText(self.processed_text)
+            # Update transcribed text
+            transcribed_text_content = result.get("text", "")
+            self.transcribed_text.setPlainText(transcribed_text_content)
             
-            # Update suggested filename
-            self.suggested_filename = result.get("suggested_filename", "")
-            if self.suggested_filename:
-                self.filename_edit.setText(f"{self.suggested_filename}.md")
-            
-            # Enable save button and clear button
-            self.save_button.setEnabled(True)
-            self.clear_processed_button.setEnabled(True)
+            # Enable processing button
+            self.process_button.setEnabled(True)
         else:
             # Show error message
             error_message = result.get("error", "Unknown error")
-            QMessageBox.warning(self, "Processing Error", f"Failed to process text: {error_message}")
+            QMessageBox.warning(self, "Transcription Error", f"Failed to transcribe audio: {error_message}")
     
-    def clear_processed_text(self):
-        """Clear processed text"""
-        self.processed_text = ""
-        self.processed_text_edit.clear()
-        self.save_button.setEnabled(False)
-        self.clear_processed_button.setEnabled(False)
+    def process_text(self):
+        """Process the transcribed text using the selected mode"""
+        transcribed_text = self.transcribed_text.toPlainText()
+        if not transcribed_text:
+            QMessageBox.warning(self, "Warning", "No transcribed text to process")
+            return
+        
+        mode_id = self.mode_combo.currentData()
+        if not mode_id:
+            QMessageBox.warning(self, "Warning", "No processing mode selected")
+            return
+        
+        self.statusBar().showMessage("Processing text...")
+        QApplication.processEvents()
+        
+        try:
+            result = self.openai_manager.process_text(transcribed_text, mode_id)
+            
+            if result.get("success", False):
+                processed_text = result.get("processed_text", "")
+                suggested_filename = result.get("suggested_filename", "")
+                
+                self.processed_text.setPlainText(processed_text)
+                
+                # Generate filename from suggested title
+                if suggested_filename:
+                    self.filename_display.setText(f"{suggested_filename}.md")
+                else:
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    self.filename_display.setText(f"note_{timestamp}.md")
+                
+                self.process_button.setEnabled(True)
+                self.save_button.setEnabled(True)
+                self.statusBar().showMessage("Text processed successfully")
+            else:
+                error_message = result.get("error", "Unknown error")
+                QMessageBox.warning(self, "Processing Error", f"Failed to process text: {error_message}")
+                self.statusBar().showMessage("Error processing text")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error processing text: {str(e)}")
+            self.statusBar().showMessage("Error processing text")
     
     def save_text(self):
         """Save processed text to file"""
@@ -557,7 +1040,7 @@ class MainWindow(QMainWindow):
         os.makedirs(output_dir, exist_ok=True)
         
         # Get filename
-        filename = self.filename_edit.text()
+        filename = self.filename_display.text()
         if not filename:
             filename = f"note-{time.strftime('%Y-%m-%d-%H%M%S')}.md"
         
@@ -569,7 +1052,7 @@ class MainWindow(QMainWindow):
         file_path = os.path.join(output_dir, filename)
         
         # Get text to save
-        text = self.processed_text_edit.toPlainText()
+        text = self.processed_text.toPlainText()
         
         try:
             # Write text to file
@@ -639,25 +1122,68 @@ class MainWindow(QMainWindow):
             self.recording_time = 0
             self.update_recording_time()
             self.transcribe_button.setEnabled(False)
-            self.clear_button.setEnabled(False)
+            self.transcribe_process_button.setEnabled(False)
+            self.refresh_audio_devices_button.setEnabled(True)
             
             # Clear transcription
-            self.clear_transcription()
+            self.transcribed_text.setPlainText("")
             
             # Clear processed text
-            self.clear_processed_text()
+            self.processed_text.setPlainText("")
             
             # Clear filename
-            self.filename_edit.clear()
+            self.filename_display.clear()
             
             # Clear cache
             self.config.clear_cache()
             
             # Reset recording button if not recording
             if not self.audio_manager.is_recording:
-                self.record_button.setText("Start Recording")
-                self.pause_button.setText("Pause")
+                self.record_button.setToolTip("Start Recording")
+                self.pause_button.setToolTip("Pause Recording")
                 self.pause_button.setEnabled(False)
-                self.device_combo.setEnabled(True)
+                self.refresh_audio_devices_button.setEnabled(True)
             
             QMessageBox.information(self, "Success", "All data has been cleared.")
+    
+    def clear_recording(self):
+        """Clear the current recording"""
+        if self.audio_manager.get_recording_duration() > 0:
+            # Ask for confirmation
+            reply = QMessageBox.question(
+                self,
+                "Clear Recording",
+                "Are you sure you want to clear the current recording? This cannot be undone.",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No
+            )
+            
+            if reply == QMessageBox.Yes:
+                # Clear recording
+                self.audio_manager.clear_recording()
+                
+                # Reset recording time
+                self.recording_time = 0
+                self.time_display.setText("00:00")
+                
+                # Reset UI
+                self.transcribe_button.setEnabled(False)
+                self.transcribe_process_button.setEnabled(False)
+                self.clear_button.setEnabled(False)
+                
+                # Show confirmation
+                self.statusBar().showMessage("Recording cleared", 3000)
+    
+    def show_system_prompts_tab(self):
+        """Show the system prompts tab"""
+        self.tab_widget.setCurrentIndex(2)
+    
+    def sanitize_filename(self, title):
+        """Sanitize a title to use as a filename"""
+        # Remove special characters and spaces
+        sanitized_title = title.replace(" ", "_").replace("/", "_").replace("\\", "_")
+        
+        # Remove non-alphanumeric characters
+        sanitized_title = "".join(char for char in sanitized_title if char.isalnum() or char == "_")
+        
+        return sanitized_title

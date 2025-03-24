@@ -285,3 +285,7 @@ class AudioManager:
                 print(f"Error calculating duration for {chunk_path}: {e}")
         
         return total_duration
+    
+    def has_recording(self):
+        """Check if there is a recording available"""
+        return bool(self.frames) or bool(self.temp_files)
