@@ -523,7 +523,7 @@ class MainWindow(QMainWindow):
             QListWidget::item:selected {
                 background-color: #2196F3;
             }
-            QListWidget::item:selected QLabel {
+            QListWidget::item:selected QLabel#promptName {
                 color: white;
                 font-weight: bold;
             }
@@ -657,7 +657,8 @@ class MainWindow(QMainWindow):
             
             # Name label (left column)
             name_label = QLabel(mode['name'])
-            name_label.setStyleSheet("font-size: 14px; font-weight: bold;")
+            name_label.setStyleSheet("font-size: 14px; font-weight: bold; color: black;")
+            name_label.setObjectName("promptName")  # Add an object name for CSS targeting
             item_layout.addWidget(name_label, 4)  # Give it more stretch
             
             # JSON indicator if applicable
@@ -718,8 +719,10 @@ class MainWindow(QMainWindow):
             if item_widget:
                 # The name is in the first child widget (QLabel)
                 for child in item_widget.children():
-                    if isinstance(child, QLabel):
+                    if isinstance(child, QLabel) and child.objectName() == "promptName":
                         self.selected_prompt_name = child.text()
+                        # Update the label text color to white when selected
+                        child.setStyleSheet("font-size: 14px; font-weight: bold; color: white;")
                         break
             
             # Enable edit/delete buttons
@@ -733,6 +736,17 @@ class MainWindow(QMainWindow):
             self.edit_prompt_button.setEnabled(False)
             self.delete_prompt_button.setEnabled(False)
             self.json_indicator.setVisible(False)
+        
+        # Reset text color of non-selected items
+        for i in range(self.prompts_list.count()):
+            item = self.prompts_list.item(i)
+            if item != current:
+                item_widget = self.prompts_list.itemWidget(item)
+                if item_widget:
+                    for child in item_widget.children():
+                        if isinstance(child, QLabel) and child.objectName() == "promptName":
+                            child.setStyleSheet("font-size: 14px; font-weight: bold; color: black;")
+                            break
     
     def add_new_prompt(self):
         """Add a new custom prompt"""
