@@ -292,6 +292,31 @@ class MainWindow(QMainWindow):
         transcribe_description.setWordWrap(True)
         left_column.addWidget(transcribe_description)
         
+        # Transcribed text display
+        left_column.addWidget(self.transcribed_text)
+        
+        # Add clear and copy buttons for transcribed text
+        transcribe_buttons_layout = QHBoxLayout()
+        
+        # Clear transcribed text button
+        self.clear_transcribed_button = QPushButton()
+        self.clear_transcribed_button.setIcon(QIcon.fromTheme("edit-clear", QIcon.fromTheme("edit-delete")))
+        self.clear_transcribed_button.setToolTip("Clear Transcribed Text")
+        self.clear_transcribed_button.clicked.connect(self.clear_transcribed_text)
+        self.clear_transcribed_button.setEnabled(False)
+        transcribe_buttons_layout.addWidget(self.clear_transcribed_button)
+        
+        # Copy transcribed text button
+        self.copy_transcribed_button = QPushButton()
+        self.copy_transcribed_button.setIcon(QIcon.fromTheme("edit-copy"))
+        self.copy_transcribed_button.setToolTip("Copy to Clipboard")
+        self.copy_transcribed_button.clicked.connect(self.copy_transcribed_text)
+        self.copy_transcribed_button.setEnabled(False)
+        transcribe_buttons_layout.addWidget(self.copy_transcribed_button)
+        
+        transcribe_buttons_layout.addStretch()
+        left_column.addLayout(transcribe_buttons_layout)
+        
         # Transcription buttons
         transcribe_buttons_layout = QHBoxLayout()
         
@@ -306,9 +331,6 @@ class MainWindow(QMainWindow):
         transcribe_buttons_layout.addWidget(self.transcribe_process_button)
         
         left_column.addLayout(transcribe_buttons_layout)
-        
-        # Transcribed text display
-        left_column.addWidget(self.transcribed_text)
         
         # ===== RIGHT COLUMN =====
         # Process section
@@ -347,6 +369,28 @@ class MainWindow(QMainWindow):
         self.processed_text.setMinimumHeight(200)
         self.processed_text.setPlaceholderText("Processed text will appear here")
         right_column.addWidget(self.processed_text)
+        
+        # Add clear and copy buttons for processed text
+        processed_buttons_layout = QHBoxLayout()
+        
+        # Clear processed text button
+        self.clear_processed_button = QPushButton()
+        self.clear_processed_button.setIcon(QIcon.fromTheme("edit-clear", QIcon.fromTheme("edit-delete")))
+        self.clear_processed_button.setToolTip("Clear Processed Text")
+        self.clear_processed_button.clicked.connect(self.clear_processed_text)
+        self.clear_processed_button.setEnabled(False)
+        processed_buttons_layout.addWidget(self.clear_processed_button)
+        
+        # Copy processed text button
+        self.copy_processed_button = QPushButton()
+        self.copy_processed_button.setIcon(QIcon.fromTheme("edit-copy"))
+        self.copy_processed_button.setToolTip("Copy to Clipboard")
+        self.copy_processed_button.clicked.connect(self.copy_processed_text)
+        self.copy_processed_button.setEnabled(False)
+        processed_buttons_layout.addWidget(self.copy_processed_button)
+        
+        processed_buttons_layout.addStretch()
+        right_column.addLayout(processed_buttons_layout)
         
         # Save section
         save_header = QLabel("SAVE")
@@ -473,6 +517,18 @@ class MainWindow(QMainWindow):
         self.prompts_list = QListWidget()
         self.prompts_list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
         self.prompts_list.currentItemChanged.connect(self.on_prompt_selected)
+        
+        # Set style for the list widget to ensure text is visible when selected
+        self.prompts_list.setStyleSheet("""
+            QListWidget::item:selected {
+                background-color: #2196F3;
+            }
+            QListWidget::item:selected QLabel {
+                color: white;
+                font-weight: bold;
+            }
+        """)
+        
         prompts_layout.addWidget(self.prompts_list)
         
         # Buttons for managing prompts
@@ -601,7 +657,7 @@ class MainWindow(QMainWindow):
             
             # Name label (left column)
             name_label = QLabel(mode['name'])
-            name_label.setStyleSheet("font-size: 12px;")
+            name_label.setStyleSheet("font-size: 14px; font-weight: bold;")
             item_layout.addWidget(name_label, 4)  # Give it more stretch
             
             # JSON indicator if applicable
@@ -1141,6 +1197,10 @@ class MainWindow(QMainWindow):
                 # Enable process button
                 self.process_button.setEnabled(True)
                 
+                # Enable clear and copy buttons for transcribed text
+                self.clear_transcribed_button.setEnabled(True)
+                self.copy_transcribed_button.setEnabled(True)
+                
                 # Update status
                 self.statusBar().showMessage("Transcription complete")
             else:
@@ -1199,6 +1259,10 @@ class MainWindow(QMainWindow):
                 suggested_filename = result.get("suggested_filename", "")
                 
                 self.processed_text.setPlainText(processed_text)
+                
+                # Enable clear and copy buttons for processed text
+                self.clear_processed_button.setEnabled(True)
+                self.copy_processed_button.setEnabled(True)
                 
                 # Generate filename from suggested title
                 if suggested_filename:
@@ -1316,9 +1380,13 @@ class MainWindow(QMainWindow):
             
             # Clear transcription
             self.transcribed_text.setPlainText("")
+            self.clear_transcribed_button.setEnabled(False)
+            self.copy_transcribed_button.setEnabled(False)
             
             # Clear processed text
             self.processed_text.setPlainText("")
+            self.clear_processed_button.setEnabled(False)
+            self.copy_processed_button.setEnabled(False)
             
             # Clear filename
             self.filename_display.clear()
@@ -1411,3 +1479,52 @@ class MainWindow(QMainWindow):
                     break
             
             QMessageBox.information(self, "Success", "Default audio device saved successfully.")
+    
+    # Methods for clear and copy buttons
+    def clear_transcribed_text(self):
+        """Clear the transcribed text"""
+        if self.transcribed_text.toPlainText():
+            reply = QMessageBox.question(
+                self, "Clear Transcribed Text",
+                "Are you sure you want to clear the transcribed text?",
+                QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.No
+            )
+            
+            if reply == QMessageBox.StandardButton.Yes:
+                self.transcribed_text.clear()
+                self.clear_transcribed_button.setEnabled(False)
+                self.copy_transcribed_button.setEnabled(False)
+                self.process_button.setEnabled(False)
+                self.statusBar().showMessage("Transcribed text cleared", 3000)
+    
+    def copy_transcribed_text(self):
+        """Copy the transcribed text to clipboard"""
+        text = self.transcribed_text.toPlainText()
+        if text:
+            clipboard = QApplication.clipboard()
+            clipboard.setText(text)
+            self.statusBar().showMessage("Transcribed text copied to clipboard", 3000)
+    
+    def clear_processed_text(self):
+        """Clear the processed text"""
+        if self.processed_text.toPlainText():
+            reply = QMessageBox.question(
+                self, "Clear Processed Text",
+                "Are you sure you want to clear the processed text?",
+                QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.No
+            )
+            
+            if reply == QMessageBox.StandardButton.Yes:
+                self.processed_text.clear()
+                self.clear_processed_button.setEnabled(False)
+                self.copy_processed_button.setEnabled(False)
+                self.save_button.setEnabled(False)
+                self.statusBar().showMessage("Processed text cleared", 3000)
+    
+    def copy_processed_text(self):
+        """Copy the processed text to clipboard"""
+        text = self.processed_text.toPlainText()
+        if text:
+            clipboard = QApplication.clipboard()
+            clipboard.setText(text)
+            self.statusBar().showMessage("Processed text copied to clipboard", 3000)

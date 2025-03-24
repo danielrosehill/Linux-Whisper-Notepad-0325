@@ -300,8 +300,9 @@ class OpenAIManager:
             base_prompt = mode_data.get("prompt", "")
             requires_json = mode_data.get("requires_json", False)
         
-        # For non-JSON modes that aren't basic_cleanup, prepend the basic_cleanup prompt
-        if not requires_json and mode != "basic_cleanup":
+        # For non-JSON modes, prepend the basic_cleanup prompt
+        # This applies to all non-JSON prompts, not just those that aren't basic_cleanup
+        if not requires_json:
             basic_cleanup_prompt = self.get_prompt("basic_cleanup")
             system_prompt = f"{basic_cleanup_prompt} {base_prompt}"
         else:
