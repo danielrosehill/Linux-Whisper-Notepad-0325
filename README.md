@@ -1,5 +1,7 @@
 # Linux Whisper Notepad
 
+![alt text](screenshots/v1/5.png)
+
 A notepad and text conversion application for Linux with speech-to-text processing and text refinement capabilities using OpenAI APIs.
 
 ## Background
@@ -19,6 +21,36 @@ The primary use cases for this application include:
 - Capturing meeting notes or lecture content
 - Creating to-do lists through voice dictation
 - Any scenario where voice input provides a faster interface for capturing text than typing
+
+## Screenshots
+
+Use the settings page in order to update your Open API key and set your preferred microphone source. 
+
+![alt text](screenshots/v1/2.png)
+
+A progress bar displays as your captured. Recorded audio is sent to the Open AI API for transcription using Whisper.
+
+![alt text](screenshots/v1/3.png)
+
+## Text Conversion Presets
+
+The utility is loaded with default system prompts in order to facilitate converting the basic recorded transcript to different formats. The original transcript is editable to allow the user to fix basic mistakes that were  Introduced during the initial transcription via Whisper and which would be otherwise passed on to the next stage. 
+
+![alt text](screenshots/v1/5.png)
+
+## Transcribed And Optimised Text
+
+Once the process text is received backed from Open AI, it is presented in the converted text area:
+
+![alt text](screenshots/v1/8.png)
+
+## Download As Markdown
+
+Markdown is my preferred file format for working with all things documents, especially related to AI workflows. 
+
+The utility uses Open AI to automatically generate a suggested title for the note, and then provides a convenient download feature which will save the optimized node to the user's preferred default path, which can be set in the Settings menu. 
+
+![alt text](screenshots/v1/9.png)
 
 ## Features
 
