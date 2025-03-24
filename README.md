@@ -1,6 +1,6 @@
 # Linux Whisper Notepad
  
-![alt text](screenshots/v2/image.png)
+ ![alt text](screenshots/22/image.png)
 
 A notepad and text conversion application for Linux with speech-to-text processing and text refinement capabilities using OpenAI APIs.
 
