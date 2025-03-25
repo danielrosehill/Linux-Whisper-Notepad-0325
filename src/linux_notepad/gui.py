@@ -158,6 +158,11 @@ class MainWindow(QMainWindow):
         prompts_tab_layout = QVBoxLayout(prompts_tab)
         self.tab_widget.addTab(prompts_tab, "System Prompts")
         
+        # Create variables tab
+        variables_tab = QWidget()
+        variables_tab_layout = QVBoxLayout(variables_tab)
+        self.tab_widget.addTab(variables_tab, "Variables")
+        
         # Create about tab
         about_tab = QWidget()
         about_tab_layout = QVBoxLayout(about_tab)
@@ -171,6 +176,9 @@ class MainWindow(QMainWindow):
         
         # Set up system prompts tab UI
         self.setup_system_prompts_tab(prompts_tab_layout)
+        
+        # Set up variables tab UI
+        self.setup_variables_tab(variables_tab_layout)
         
         # Set up about tab UI
         self.setup_about_tab(about_tab_layout)
@@ -274,6 +282,24 @@ class MainWindow(QMainWindow):
         controls_layout.addWidget(self.clear_button)
         
         left_column.addLayout(controls_layout)
+        
+        # Recording time display and scrub silences checkbox
+        time_layout = QHBoxLayout()
+        
+        # Add scrub silences checkbox
+        self.main_scrub_silences_checkbox = QCheckBox("Scrub Silences")
+        self.main_scrub_silences_checkbox.setToolTip("Remove long pauses from audio before transcription")
+        self.main_scrub_silences_checkbox.stateChanged.connect(self.update_scrub_silences)
+        time_layout.addWidget(self.main_scrub_silences_checkbox)
+        
+        time_layout.addStretch()
+        
+        # Recording time display
+        self.time_display = QLabel("00:00")
+        self.time_display.setStyleSheet("font-size: 14px; font-weight: bold;")
+        time_layout.addWidget(self.time_display)
+        
+        left_column.addLayout(time_layout)
         
         # Transcription progress bar
         self.progress_bar = QProgressBar()
@@ -480,7 +506,24 @@ class MainWindow(QMainWindow):
         
         audio_layout.addRow("Default Audio Device:", device_settings_layout)
         
-        self.save_audio_settings_button = QPushButton("Save Default Audio Device")
+        # Silence removal settings
+        self.scrub_silences_checkbox = QCheckBox("Scrub Silences")
+        self.scrub_silences_checkbox.setToolTip("Remove long pauses from audio before transcription")
+        audio_layout.addRow("Audio Processing:", self.scrub_silences_checkbox)
+        
+        # Silence threshold settings
+        silence_settings_layout = QHBoxLayout()
+        self.silence_threshold_edit = QLineEdit()
+        self.silence_threshold_edit.setPlaceholderText("Default: -40 dB")
+        silence_settings_layout.addWidget(self.silence_threshold_edit)
+        
+        self.min_silence_duration_edit = QLineEdit()
+        self.min_silence_duration_edit.setPlaceholderText("Default: 1.0 seconds")
+        silence_settings_layout.addWidget(self.min_silence_duration_edit)
+        
+        audio_layout.addRow("Silence Threshold / Min Duration:", silence_settings_layout)
+        
+        self.save_audio_settings_button = QPushButton("Save Audio Settings")
         self.save_audio_settings_button.clicked.connect(self.save_default_audio_device)
         audio_layout.addRow("", self.save_audio_settings_button)
         
@@ -581,6 +624,82 @@ class MainWindow(QMainWindow):
         
         # Populate prompts list
         self.populate_prompts_list()
+    
+    def setup_variables_tab(self, layout):
+        """Set up the variables tab UI"""
+        # Instructions header
+        header_label = QLabel("VARIABLES")
+        header_label.setStyleSheet("font-size: 15px; font-weight: bold; color: white; background-color: rgba(33, 150, 243, 0.9); padding: 5px 10px; border-radius: 2px;")
+        layout.addWidget(header_label)
+        
+        # Description
+        description_label = QLabel(
+            "Variables allow you to personalize system prompts. When writing a system prompt, "
+            "you can include these variables using the placeholders shown below, and they will "
+            "be replaced with your saved values when the prompt is used."
+        )
+        description_label.setWordWrap(True)
+        description_label.setStyleSheet("font-style: italic; color: #666; margin-bottom: 10px; font-size: 12px;")
+        layout.addWidget(description_label)
+        
+        # Variables form
+        variables_group = QGroupBox("Your Variables")
+        variables_layout = QFormLayout(variables_group)
+        
+        # User name
+        self.user_name_input = QLineEdit()
+        self.user_name_input.setPlaceholderText("Enter your name")
+        variables_layout.addRow("Name:", self.user_name_input)
+        
+        # Variable placeholder info
+        name_placeholder_label = QLabel("Use <b>{user_name}</b> in your prompts")
+        name_placeholder_label.setStyleSheet("color: #1565C0; font-size: 11px;")
+        variables_layout.addRow("", name_placeholder_label)
+        
+        # Email signature
+        self.email_signature_input = QTextEdit()
+        self.email_signature_input.setPlaceholderText("Enter your email signature")
+        self.email_signature_input.setMaximumHeight(100)
+        variables_layout.addRow("Email Signature:", self.email_signature_input)
+        
+        # Variable placeholder info
+        signature_placeholder_label = QLabel("Use <b>{email_signature}</b> in your prompts")
+        signature_placeholder_label.setStyleSheet("color: #1565C0; font-size: 11px;")
+        variables_layout.addRow("", signature_placeholder_label)
+        
+        # Add some spacing
+        layout.addWidget(variables_group)
+        
+        # Example usage section
+        example_group = QGroupBox("Example Usage")
+        example_layout = QVBoxLayout(example_group)
+        
+        example_text = QLabel(
+            "Example system prompt using variables:<br><br>"
+            "<i>\"Format this text as an email from {user_name}. "
+            "Include the following signature at the end: {email_signature}\"</i>"
+        )
+        example_text.setWordWrap(True)
+        example_text.setTextFormat(Qt.TextFormat.RichText)
+        example_layout.addWidget(example_text)
+        
+        layout.addWidget(example_group)
+        
+        # Save button
+        save_button = QPushButton("Save Variables")
+        save_button.setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold;")
+        save_button.clicked.connect(self.save_variables)
+        
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        button_layout.addWidget(save_button)
+        layout.addLayout(button_layout)
+        
+        # Add stretch to push everything to the top
+        layout.addStretch()
+        
+        # Load variables
+        self.load_variables()
     
     def setup_about_tab(self, layout):
         """Set up the about tab UI"""
@@ -970,6 +1089,18 @@ class MainWindow(QMainWindow):
                 if self.settings_device_combo.itemData(i) == device_index:
                     self.settings_device_combo.setCurrentIndex(i)
                     break
+        
+        # Load silence removal settings
+        scrub_silences = self.config.get("scrub_silences", True)
+        self.scrub_silences_checkbox.setChecked(scrub_silences)
+        self.main_scrub_silences_checkbox.setChecked(scrub_silences)
+        
+        # Load silence threshold settings
+        silence_threshold = self.config.get("silence_threshold", -40)
+        self.silence_threshold_edit.setText(str(silence_threshold))
+        
+        min_silence_duration = self.config.get("min_silence_duration", 1.0)
+        self.min_silence_duration_edit.setText(str(min_silence_duration))
         
         # Always use basic_cleanup as default processing mode
         # We don't load the last_used_mode from config anymore
@@ -1495,13 +1626,36 @@ class MainWindow(QMainWindow):
         if current_device_index is not None:
             self.config.set("default_audio_device", str(current_device_index))
             
+            # Save silence removal settings
+            scrub_silences = self.scrub_silences_checkbox.isChecked()
+            self.config.set("scrub_silences", scrub_silences)
+            # Sync with main tab checkbox
+            self.main_scrub_silences_checkbox.setChecked(scrub_silences)
+            
+            # Save silence threshold settings
+            try:
+                silence_threshold = float(self.silence_threshold_edit.text())
+                self.config.set("silence_threshold", silence_threshold)
+            except ValueError:
+                # Use default if invalid
+                self.config.set("silence_threshold", -40)
+                self.silence_threshold_edit.setText("-40")
+            
+            try:
+                min_silence_duration = float(self.min_silence_duration_edit.text())
+                self.config.set("min_silence_duration", min_silence_duration)
+            except ValueError:
+                # Use default if invalid
+                self.config.set("min_silence_duration", 1.0)
+                self.min_silence_duration_edit.setText("1.0")
+            
             # Also update the device in the main tab
             for i in range(self.device_combo.count()):
                 if self.device_combo.itemData(i) == current_device_index:
                     self.device_combo.setCurrentIndex(i)
                     break
             
-            QMessageBox.information(self, "Success", "Default audio device saved successfully.")
+            QMessageBox.information(self, "Success", "Audio settings saved successfully.")
     
     # Methods for clear and copy buttons
     def clear_transcribed_text(self):
@@ -1551,3 +1705,34 @@ class MainWindow(QMainWindow):
             clipboard = QApplication.clipboard()
             clipboard.setText(text)
             self.statusBar().showMessage("Processed text copied to clipboard", 3000)
+    
+    def update_scrub_silences(self, state):
+        """Update scrub silences setting when checkbox state changes in main tab"""
+        # Sync the checkbox in settings tab with the one in main tab
+        self.scrub_silences_checkbox.setChecked(state == Qt.CheckState.Checked)
+        # Save the setting
+        self.config.set("scrub_silences", state == Qt.CheckState.Checked)
+    
+    def save_variables(self):
+        """Save variables to configuration"""
+        variables = {
+            "user_name": self.user_name_input.text().strip(),
+            "email_signature": self.email_signature_input.toPlainText().strip()
+        }
+        
+        self.config.set("variables", variables)
+        
+        # Show confirmation message
+        QMessageBox.information(
+            self,
+            "Variables Saved",
+            "Your variables have been saved and will be available in system prompts."
+        )
+    
+    def load_variables(self):
+        """Load variables from configuration"""
+        variables = self.config.get("variables", {})
+        
+        # Set values in UI
+        self.user_name_input.setText(variables.get("user_name", ""))
+        self.email_signature_input.setText(variables.get("email_signature", ""))

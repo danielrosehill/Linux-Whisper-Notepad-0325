@@ -274,6 +274,14 @@ class AudioManager:
             
             # Add to temp files list
             self.temp_files.append(combined_path)
+            
+            # Check if we need to scrub silences
+            if self.config.get("scrub_silences", True):
+                processed_path = self._remove_silences(combined_path)
+                if processed_path:
+                    self.temp_files.append(processed_path)
+                    return processed_path
+            
             return combined_path
         else:
             # Create a temporary file
@@ -288,7 +296,148 @@ class AudioManager:
                 wf.writeframes(b''.join(self.frames))
             
             self.temp_files.append(temp_path)
+            
+            # Check if we need to scrub silences
+            if self.config.get("scrub_silences", True):
+                processed_path = self._remove_silences(temp_path)
+                if processed_path:
+                    self.temp_files.append(processed_path)
+                    return processed_path
+            
             return temp_path
+    
+    def has_recording(self):
+        """Check if there is a recording available"""
+        return bool(self.frames) or bool(self.temp_files)
+    
+    def get_temp_file_path(self):
+        """Get the path to the temporary audio file"""
+        return self.save_to_temp_file()
+    
+    def _remove_silences(self, audio_file_path):
+        """
+        Remove silences from audio file
+        
+        Args:
+            audio_file_path (str): Path to the audio file
+            
+        Returns:
+            str: Path to the processed audio file, or None if processing failed
+        """
+        try:
+            # Get configuration parameters
+            silence_threshold = self.config.get("silence_threshold", -40)  # in dB
+            min_silence_duration = self.config.get("min_silence_duration", 1.0)  # in seconds
+            
+            # Read the audio file
+            with wave.open(audio_file_path, 'rb') as wf:
+                # Get audio parameters
+                channels = wf.getnchannels()
+                sample_width = wf.getsampwidth()
+                framerate = wf.getframerate()
+                n_frames = wf.getnframes()
+                
+                # Read all frames
+                frames = wf.readframes(n_frames)
+            
+            # Convert to numpy array for processing
+            dtype = np.int16
+            audio_data = np.frombuffer(frames, dtype=dtype)
+            
+            # If stereo, convert to mono for silence detection
+            if channels == 2:
+                # Reshape to separate channels
+                audio_data = audio_data.reshape(-1, 2)
+                # Average the channels
+                mono_data = audio_data.mean(axis=1).astype(dtype)
+            else:
+                mono_data = audio_data
+            
+            # Calculate the RMS value (volume) of each chunk
+            chunk_samples = int(framerate * 0.1)  # 100ms chunks for analysis
+            chunks = [mono_data[i:i+chunk_samples] for i in range(0, len(mono_data), chunk_samples)]
+            
+            # Calculate RMS for each chunk
+            rms_values = []
+            for chunk in chunks:
+                if len(chunk) > 0:
+                    # Calculate RMS (root mean square)
+                    rms = np.sqrt(np.mean(chunk.astype(np.float32)**2))
+                    # Convert to dB
+                    if rms > 0:
+                        rms_db = 20 * np.log10(rms / np.iinfo(dtype).max)
+                    else:
+                        rms_db = -100  # Very quiet
+                    rms_values.append(rms_db)
+                else:
+                    rms_values.append(-100)  # Empty chunk
+            
+            # Identify silent chunks
+            is_silent = [rms <= silence_threshold for rms in rms_values]
+            
+            # Group consecutive silent chunks
+            silent_regions = []
+            start_idx = None
+            
+            for i, silent in enumerate(is_silent):
+                if silent and start_idx is None:
+                    start_idx = i
+                elif not silent and start_idx is not None:
+                    # Calculate duration in seconds
+                    duration = (i - start_idx) * 0.1  # Each chunk is 0.1s
+                    if duration >= min_silence_duration:
+                        silent_regions.append((start_idx, i))
+                    start_idx = None
+            
+            # Handle the case where the file ends with silence
+            if start_idx is not None:
+                duration = (len(is_silent) - start_idx) * 0.1
+                if duration >= min_silence_duration:
+                    silent_regions.append((start_idx, len(is_silent)))
+            
+            # If no silent regions to remove, return the original file
+            if not silent_regions:
+                return None
+            
+            # Create a new audio file without the silent regions
+            fd, processed_path = tempfile.mkstemp(suffix='_processed.wav')
+            os.close(fd)
+            
+            with wave.open(processed_path, 'wb') as wf:
+                wf.setnchannels(channels)
+                wf.setsampwidth(sample_width)
+                wf.setframerate(framerate)
+                
+                # Write non-silent regions
+                last_end = 0
+                for start, end in silent_regions:
+                    # Convert chunk indices to sample indices
+                    start_sample = start * chunk_samples
+                    end_sample = min(end * chunk_samples, len(audio_data))
+                    
+                    # Write data up to the silent region
+                    if channels == 2:
+                        # For stereo, we need to handle the original shape
+                        region_data = audio_data[last_end:start_sample].tobytes()
+                    else:
+                        region_data = audio_data[last_end:start_sample].tobytes()
+                    
+                    wf.writeframes(region_data)
+                    last_end = end_sample
+                
+                # Write the remaining data after the last silent region
+                if last_end < len(audio_data):
+                    if channels == 2:
+                        region_data = audio_data[last_end:].tobytes()
+                    else:
+                        region_data = audio_data[last_end:].tobytes()
+                    wf.writeframes(region_data)
+            
+            return processed_path
+            
+        except Exception as e:
+            print(f"Error removing silences: {e}")
+            return None
     
     def get_recording_duration(self):
         """Get duration of recorded audio in seconds"""
@@ -312,7 +461,3 @@ class AudioManager:
                 print(f"Error calculating duration for {chunk_path}: {e}")
         
         return total_duration
-    
-    def has_recording(self):
-        """Check if there is a recording available"""
-        return bool(self.frames) or bool(self.temp_files)

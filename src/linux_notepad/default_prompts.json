@@ -34,6 +34,11 @@
         "prompt": "Convert the following dictated text into a professional email format. Add an appropriate subject line, greeting, body paragraphs, and closing. Maintain a professional tone throughout.",
         "requires_json": false
     },
+    "personalized_email": {
+        "name": "Personalized Email",
+        "prompt": "Convert the following dictated text into a professional email format from {user_name}. Add an appropriate subject line, greeting, body paragraphs, and include this signature at the end: {email_signature}. Maintain a professional tone throughout.",
+        "requires_json": false
+    },
     "blog_post": {
         "name": "Blog Post",
         "prompt": "Format the following dictated text as a blog post. Add an engaging title, organize content into sections with headings, and improve readability with proper paragraph structure.",

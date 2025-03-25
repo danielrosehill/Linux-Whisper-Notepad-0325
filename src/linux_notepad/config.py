@@ -23,7 +23,14 @@ class Config:
             "output_directory": os.path.join(Path.home(), "Documents"),
             "last_used_mode": "basic_cleanup",
             "max_chunk_duration": 120,  # Maximum audio chunk duration in seconds
-            "whisper_model": "whisper-1"  # Default Whisper model
+            "whisper_model": "whisper-1",  # Default Whisper model
+            "scrub_silences": True,  # Default to scrubbing silences
+            "silence_threshold": -40,  # Default silence threshold in dB
+            "min_silence_duration": 1.0,  # Minimum silence duration to remove (in seconds)
+            "variables": {  # User variables for use in prompts
+                "user_name": "",
+                "email_signature": ""
+            }
         }
         
         # Current configuration

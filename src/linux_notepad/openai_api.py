@@ -288,8 +288,26 @@ class OpenAIManager:
             "error": ""
         }
     
-    def process_text(self, text, mode="basic_cleanup"):
-        """Process text using OpenAI GPT model with specified mode"""
+    def replace_variables_in_prompt(self, prompt):
+        """Replace variable placeholders in a prompt with their values"""
+        variables = self.config.get("variables", {})
+        
+        # Define variable placeholders and their corresponding config keys
+        variable_map = {
+            "{user_name}": "user_name",
+            "{email_signature}": "email_signature"
+        }
+        
+        # Replace each variable placeholder with its value
+        for placeholder, var_key in variable_map.items():
+            value = variables.get(var_key, "")
+            if value:  # Only replace if the variable has a value
+                prompt = prompt.replace(placeholder, value)
+                
+        return prompt
+    
+    def process_text(self, text, mode_id):
+        """Process text using OpenAI GPT API with the specified mode"""
         if not self.api_key:
             return {"success": False, "error": "OpenAI API key not set", "processed_text": "", "suggested_filename": ""}
         
@@ -297,12 +315,12 @@ class OpenAIManager:
             return {"success": False, "error": "No text provided for processing", "processed_text": "", "suggested_filename": ""}
         
         # Get mode data
-        mode_data = self.TEXT_PROCESSING_MODES.get(mode, self.TEXT_PROCESSING_MODES["basic_cleanup"])
+        mode_data = self.TEXT_PROCESSING_MODES.get(mode_id, self.TEXT_PROCESSING_MODES["basic_cleanup"])
         
         # Handle legacy format
         if isinstance(mode_data, str):
             base_prompt = mode_data
-            requires_json = mode == "extract_todos"  # Default assumption
+            requires_json = mode_id == "extract_todos"  # Default assumption
         else:
             base_prompt = mode_data.get("prompt", "")
             requires_json = mode_data.get("requires_json", False)
@@ -318,6 +336,9 @@ class OpenAIManager:
         # Add JSON formatting instruction for JSON modes
         if requires_json:
             system_prompt = f"{system_prompt} Return your response in JSON format."
+        
+        # Replace variables in the prompt
+        system_prompt = self.replace_variables_in_prompt(system_prompt)
         
         try:
             if not self.client:
@@ -342,7 +363,7 @@ class OpenAIManager:
                 # Parse the JSON response
                 try:
                     response_json = json.loads(response_content)
-                    if mode == "extract_todos":
+                    if mode_id == "extract_todos":
                         processed_text = response_json.get("todos", response_content)
                     else:
                         processed_text = response_json.get("processed_text", response_content)
