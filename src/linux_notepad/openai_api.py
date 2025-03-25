@@ -47,7 +47,7 @@ class OpenAIManager:
         try:
             if os.path.exists(default_prompts_file):
                 with open(default_prompts_file, 'r') as f:
-                    self.DEFAULT_TEXT_PROCESSING_MODES = json.load(f)
+                    loaded_prompts = json.load(f)
                 print(f"Successfully loaded default prompts from: {default_prompts_file}")
             else:
                 print(f"Default prompts file not found: {default_prompts_file}")
@@ -59,6 +59,20 @@ class OpenAIManager:
                         "requires_json": False
                     }
                 }
+                loaded_prompts = self.DEFAULT_TEXT_PROCESSING_MODES
+            
+            # Validate loaded prompts
+            validated_prompts = {}
+            for mode_id, mode_data in loaded_prompts.items():
+                if isinstance(mode_data, dict) and 'prompt' in mode_data:
+                    # Ensure all required fields are present
+                    validated_prompts[mode_id] = {
+                        "name": mode_data.get("name", mode_id.replace("_", " ").title()),
+                        "prompt": mode_data["prompt"],
+                        "requires_json": mode_data.get("requires_json", False),
+                        "description": mode_data.get("description", "")
+                    }
+            self.DEFAULT_TEXT_PROCESSING_MODES = validated_prompts
         except Exception as e:
             print(f"Error loading default prompts: {e}")
             # Fallback to minimal defaults if loading fails
@@ -121,6 +135,10 @@ class OpenAIManager:
     def get_prompt(self, mode_id):
         """Get the prompt for a specific mode"""
         mode_data = self.TEXT_PROCESSING_MODES.get(mode_id, {})
+        if not mode_data:
+            print(f"Warning: No prompt found for mode_id: {mode_id}")
+            return ""
+            
         if isinstance(mode_data, str):
             # Handle legacy format (string only)
             return mode_data
@@ -132,6 +150,10 @@ class OpenAIManager:
     def requires_json(self, mode_id):
         """Check if a mode requires JSON output"""
         mode_data = self.TEXT_PROCESSING_MODES.get(mode_id, {})
+        if not mode_data:
+            print(f"Warning: No mode data found for mode_id: {mode_id}")
+            return False
+            
         if isinstance(mode_data, dict):
             return mode_data.get("requires_json", False)
         return False
@@ -344,7 +366,7 @@ class OpenAIManager:
                 wf.setpos(i)
                 chunk_data = wf.readframes(min(chunk_frames, n_frames - i))
                 
-                # Save chunk to temp file
+                # Save chunk to temporary file
                 chunk_path = os.path.join(cache_dir, f"transcribe_chunk_{i}.wav")
                 with wave.open(chunk_path, 'wb') as chunk_wf:
                     chunk_wf.setnchannels(channels)
@@ -517,6 +539,11 @@ class OpenAIManager:
         # Get mode data
         mode_data = self.TEXT_PROCESSING_MODES.get(mode_id, self.TEXT_PROCESSING_MODES["basic_cleanup"])
         
+        # Safety check for mode data
+        if not mode_data:
+            return {"success": False, "error": f"Invalid mode: {mode_id}", "processed_text": "", "suggested_filename": ""}
+        
+        # Handle legacy format
         # Handle legacy format
         if isinstance(mode_data, str):
             base_prompt = mode_data
@@ -640,94 +667,58 @@ class OpenAIManager:
         if len(mode_ids) == 1:
             return self.process_text(text, mode_ids[0])
         
-        # Check if basic_cleanup is in the list of modes
-        has_basic_cleanup = "basic_cleanup" in mode_ids
-        
-        # Create a combined prompt with all selected modes
-        system_prompts = []
-        requires_json = False
-        json_mode_id = None
-        
-        # First, add the basic_cleanup prompt if any non-JSON mode is selected
-        # This ensures it's only added once
-        basic_cleanup_prompt = self.get_prompt("basic_cleanup")
-        basic_cleanup_added = False
-        
-        # Check if any mode requires JSON output and store the first one
-        for mode_id in mode_ids:
-            if self.requires_json(mode_id):
-                requires_json = True
-                json_mode_id = mode_id
-                break
-        
-        # If any mode requires JSON, we can't combine them with non-JSON modes
-        if requires_json and json_mode_id:
-            # Use the first JSON-requiring mode we found
-            return self.process_text(text, json_mode_id)
-        
-        # Process each mode and build the combined prompt
-        for mode_id in mode_ids:
-            # Skip JSON modes as they can't be combined
-            if self.requires_json(mode_id):
-                continue
-                
-            # Get the prompt for this mode
-            mode_data = self.TEXT_PROCESSING_MODES.get(mode_id, {})
-            
-            # Handle legacy format
-            if isinstance(mode_data, str):
-                base_prompt = mode_data
-            else:
-                base_prompt = mode_data.get("prompt", "")
-            
-            # If this is the basic_cleanup mode, skip adding it separately
-            # as we'll add it at the beginning of the combined prompt
-            if mode_id == "basic_cleanup":
-                basic_cleanup_added = True
-                continue
-                
-            # Add the prompt to our list
-            system_prompts.append(base_prompt)
-        
-        # Build the final system prompt
-        if system_prompts:
-            # Add basic_cleanup at the beginning if it's not already in the list
-            # or if it is in the list but we haven't added it yet
-            if has_basic_cleanup or not basic_cleanup_added:
-                combined_prompt = basic_cleanup_prompt + " Additionally, " + " Then, ".join(system_prompts)
-            else:
-                combined_prompt = " Then, ".join(system_prompts)
-        else:
-            # If no other prompts, just use basic_cleanup
-            combined_prompt = basic_cleanup_prompt
-        
-        # Replace variables in the prompt
-        combined_prompt = self.replace_variables_in_prompt(combined_prompt)
-        
         try:
-            if not self.client:
-                self.client = openai.OpenAI(api_key=self.api_key)
+            # Check if any mode requires JSON output
+            json_modes = [mode_id for mode_id in mode_ids if self.requires_json(mode_id)]
+            if json_modes:
+                return {"success": False, "error": "Cannot combine JSON-requiring modes with other modes. Please select either a single JSON mode or multiple non-JSON modes.", "processed_text": "", "suggested_filename": ""}
             
-            response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": combined_prompt},
-                    {"role": "user", "content": text}
-                ]
-            ) 
+            # Start with basic cleanup if it's selected
+            current_text = text
+            if "basic_cleanup" in mode_ids:
+                result = self.process_text(current_text, "basic_cleanup")
+                if not result["success"]:
+                    return result
+                current_text = result["processed_text"]
+                # Remove basic_cleanup from the list to avoid processing it again
+                mode_ids = [mode_id for mode_id in mode_ids if mode_id != "basic_cleanup"]
             
-            # Get the processed text from the response
-            processed_text = response.choices[0].message.content if response.choices else ""
+            # Process remaining modes in sequence
+            for mode_id in mode_ids:
+                mode_data = self.TEXT_PROCESSING_MODES.get(mode_id)
+                if not mode_data:
+                    continue
+                
+                # Get the prompt for this mode
+                prompt = mode_data.get("prompt", "") if isinstance(mode_data, dict) else mode_data
+                
+                # Replace variables in the prompt
+                prompt = self.replace_variables_in_prompt(prompt)
+                
+                if not self.client:
+                    self.client = openai.OpenAI(api_key=self.api_key)
+                
+                # Process with current mode
+                response = self.client.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=[
+                        {"role": "system", "content": prompt},
+                        {"role": "user", "content": current_text}
+                    ]
+                )
+                
+                # Update text for next iteration
+                current_text = response.choices[0].message.content if response.choices else current_text
             
-            # Generate a suggested filename using JSON mode
+            # Generate filename suggestion
             filename_response = self.client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": "Generate a short, descriptive filename (without extension) based on the content of the following text. Use lowercase with hyphens between words. Keep it under 40 characters. Return the result in JSON format: {\"filename\": \"<your-filename-here>\"}"},
-                    {"role": "user", "content": processed_text[:1000]}  # Use first 1000 chars for filename generation
+                    {"role": "user", "content": current_text[:1000]}
                 ],
                 response_format={"type": "json_object"}
-            ) 
+            )
             
             # Parse the JSON response for filename
             try:
@@ -735,7 +726,6 @@ class OpenAIManager:
                 filename_json = json.loads(filename_content)
                 suggested_filename = filename_json.get("filename", "")
             except json.JSONDecodeError:
-                # Fallback if JSON parsing fails
                 suggested_filename = filename_response.choices[0].message.content.strip() if filename_response.choices else ""
             
             # Ensure filename is valid
@@ -748,9 +738,10 @@ class OpenAIManager:
             
             return {
                 "success": True,
-                "processed_text": processed_text,
+                "processed_text": current_text,
                 "suggested_filename": suggested_filename
             }
+            
         except Exception as e:
             return {
                 "success": False,
@@ -762,6 +753,11 @@ class OpenAIManager:
     def get_available_modes(self):
         """Get list of available text processing modes"""
         modes = []
+        
+        if not self.TEXT_PROCESSING_MODES:
+            print("Warning: No text processing modes available")
+            return modes
+            
         for mode_id, data in self.TEXT_PROCESSING_MODES.items():
             if isinstance(data, str):
                 # Legacy format
@@ -786,6 +782,10 @@ class OpenAIManager:
     def get_mode_description(self, mode_id):
         """Get the description for a specific mode"""
         mode_data = self.TEXT_PROCESSING_MODES.get(mode_id, {})
+        if not mode_data:
+            print(f"Warning: No mode data found for mode_id: {mode_id}")
+            return ""
+            
         if isinstance(mode_data, dict):
             # Return description if available, otherwise return the first part of the prompt
             description = mode_data.get("description", "")

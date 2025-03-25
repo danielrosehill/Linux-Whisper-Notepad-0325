@@ -104,7 +104,6 @@ class ProcessingWorker(QThread):
         self.finished.emit(result)
 
 class MainWindow(QMainWindow):
-    """Main application window"""
     
     def __init__(self):
         super().__init__()
@@ -926,6 +925,11 @@ class MainWindow(QMainWindow):
     def populate_prompts_list(self):
         """Populate the prompts list with available prompts"""
         self.prompts_list.clear()
+
+        # Safety check for openai_manager
+        if not hasattr(self, 'openai_manager') or not self.openai_manager:
+            print("Error: OpenAI manager not properly initialized")
+            return
         
         modes = self.openai_manager.get_available_modes()
         
@@ -1002,6 +1006,12 @@ class MainWindow(QMainWindow):
     def on_prompt_selected(self, current, previous):
         """Handle prompt selection"""
         if current:
+            # Safety check for mode_id
+            mode_id = current.data(Qt.ItemDataRole.UserRole)
+            if not mode_id:
+                print("Error: Invalid mode_id for selected prompt")
+                return
+
             mode_id = current.data(Qt.ItemDataRole.UserRole)
             prompt_text = self.openai_manager.get_prompt(mode_id)
             requires_json = self.openai_manager.requires_json(mode_id)
@@ -1078,6 +1088,12 @@ class MainWindow(QMainWindow):
             dialog.setMinimumSize(600, 400)
             
             layout = QVBoxLayout(dialog)
+
+            # Safety check for openai_manager
+            if not hasattr(self, 'openai_manager') or not self.openai_manager:
+                QMessageBox.critical(self, "Error", "OpenAI manager not properly initialized")
+                dialog.reject()
+                return
             
             # Instructions
             instructions = QLabel(
@@ -1109,7 +1125,14 @@ class MainWindow(QMainWindow):
             if dialog.exec() == QDialog.DialogCode.Accepted:
                 prompt_text = prompt_edit.toPlainText()
                 requires_json = json_checkbox.isChecked()
-                
+
+                # Validate mode_id
+                if not mode_id or not isinstance(mode_id, str):
+                    QMessageBox.warning(
+                        self, "Invalid Mode ID", 
+                        "Could not create prompt: Invalid mode ID generated"
+                    )
+                    return
                 if prompt_text:
                     # Add prompt with JSON flag
                     self.openai_manager.add_custom_prompt(mode_id, name, prompt_text, requires_json)
@@ -1133,6 +1156,12 @@ class MainWindow(QMainWindow):
         if not current_item:
             return
         
+        # Safety check for openai_manager
+        if not hasattr(self, 'openai_manager') or not self.openai_manager:
+            QMessageBox.critical(self, "Error", "OpenAI manager not properly initialized")
+            self.edit_prompt_button.setEnabled(False)
+            return
+
         mode_id = current_item.data(Qt.ItemDataRole.UserRole)
         name = self.selected_prompt_name  # Use the stored name
         current_prompt = self.openai_manager.get_prompt(mode_id)
@@ -1196,6 +1225,12 @@ class MainWindow(QMainWindow):
         if not current_item:
             return
         
+        # Safety check for openai_manager
+        if not hasattr(self, 'openai_manager') or not self.openai_manager:
+            QMessageBox.critical(self, "Error", "OpenAI manager not properly initialized")
+            self.delete_prompt_button.setEnabled(False)
+            return
+
         mode_id = current_item.data(Qt.ItemDataRole.UserRole)
         name = self.selected_prompt_name  # Use the stored name
         
@@ -1478,6 +1513,12 @@ class MainWindow(QMainWindow):
         self.transcribe_process_button.setEnabled(False)
         
         # Start transcription in background thread
+        # Safety check for openai_manager
+        if not hasattr(self, 'openai_manager') or not self.openai_manager:
+            QMessageBox.critical(self, "Error", "OpenAI manager not properly initialized")
+            self.progress_bar.setVisible(False)
+            return
+
         self.transcription_worker = TranscriptionWorker(self.openai_manager, temp_file)
         self.transcription_worker.progress.connect(self.update_transcription_progress)
         self.transcription_worker.chunk_progress.connect(self.update_chunk_progress)
@@ -1522,6 +1563,9 @@ class MainWindow(QMainWindow):
     
     def handle_transcription_result_for_processing(self, result):
         """Handle transcription result and proceed to processing"""
+        # Hide progress
+        self.progress_bar.setVisible(False)
+        
         if result.get("success", False):
             transcribed_text = result.get("text", "")
             
@@ -1532,12 +1576,36 @@ class MainWindow(QMainWindow):
             self.clear_transcribed_button.setEnabled(True)
             self.copy_transcribed_button.setEnabled(True)
             
-            # Update status
-            self.statusBar().showMessage("Transcription complete. Processing text...")
+            # Re-enable buttons
+            self.transcribe_button.setEnabled(True)
+            self.transcribe_process_button.setEnabled(True)
             
-            # Give the user a brief moment to see the transcription before processing
-            # This also allows them to cancel processing if needed
-            QTimer.singleShot(500, self.process_text)
+            # Update status
+            self.statusBar().showMessage("Transcription complete. Ready to process text.")
+            
+            # Ensure mode_list has a valid selection
+            if hasattr(self, 'mode_list') and self.mode_list:
+                # Check if any modes are selected
+                has_selection = False
+                for i in range(self.mode_list.count()):
+                    if self.mode_list.item(i).isSelected():
+                        has_selection = True
+                        break
+                
+                # If no modes are selected, select basic_cleanup by default
+                if not has_selection:
+                    self.select_only_basic_cleanup(self.mode_list)
+                    self.update_mode_selection_count()
+            else:
+                # If mode_list doesn't exist or is not properly initialized, reinitialize it
+                self.populate_processing_modes()
+            
+            # Enable the process button now that we have text and a valid mode selection
+            self.process_button.setEnabled(True)
+            
+            # Don't automatically process - let the user choose when to process
+            # This avoids race conditions with mode selection
+            # QTimer.singleShot(500, self.process_text)
         else:
             error_message = result.get("error", "Unknown error")
             QMessageBox.warning(self, "Transcription Error", f"Failed to transcribe audio: {error_message}")
@@ -1564,7 +1632,6 @@ class MainWindow(QMainWindow):
         # Hide progress
         self.progress_bar.setVisible(False)
         self.transcribe_button.setEnabled(True)
-        self.transcribe_process_button.setEnabled(True)
         
         # Safety check to ensure transcribed_text is properly initialized
         if not hasattr(self.transcribed_text, 'setPlainText'):
@@ -1594,7 +1661,7 @@ class MainWindow(QMainWindow):
             # Show error message
             error_message = result.get("error", "Unknown error") if isinstance(result, dict) else "Unknown error"
             QMessageBox.warning(self, "Transcription Error", f"Failed to transcribe audio: {error_message}")
-            self.statusBar().showMessage("Transcription failed")
+            self.statusBar().showMessage("Error transcribing audio")
     
     def handle_transcription_result(self, result):
         """Handle transcription result"""
@@ -1620,85 +1687,106 @@ class MainWindow(QMainWindow):
             error_message = result.get("error", "Unknown error")
             QMessageBox.warning(self, "Transcription Error", f"Failed to transcribe audio: {error_message}")
             self.statusBar().showMessage("Error transcribing audio")
+            
+            # Re-enable buttons
+            self.transcribe_button.setEnabled(True)
+            self.transcribe_process_button.setEnabled(True)
     
     def process_text(self):
         """Process the transcribed text using the selected mode(s)"""
         # Get the current text from the transcribed_text widget
+        # Safety check for openai_manager
+        if not hasattr(self, 'openai_manager') or not self.openai_manager:
+            QMessageBox.critical(self, "Error", "OpenAI manager not properly initialized")
+            self.process_button.setEnabled(False)
+            return
+
         # This ensures any edits made by the user are included
         transcribed_text = self.transcribed_text.toPlainText()
         if not transcribed_text:
             QMessageBox.warning(self, "Warning", "No transcribed text to process")
             return
         
-        # Get selected mode IDs
-        selected_modes = []
-        selected_mode_names = []
-        for i in range(self.mode_list.count()):
-            item = self.mode_list.item(i)
-            if item.isSelected():
-                mode_id = item.data(Qt.ItemDataRole.UserRole)
-                selected_modes.append(mode_id)
-                selected_mode_names.append(item.text())
-        
-        if not selected_modes:
-            QMessageBox.warning(self, "Warning", "No processing mode selected")
-            return
-        
-        # Update status message based on number of selected modes
-        if len(selected_modes) == 1:
-            self.statusBar().showMessage(f"Processing text with mode: {selected_mode_names[0]}...")
-        else:
-            self.statusBar().showMessage(f"Processing text with {len(selected_modes)} modes...")
-        
-        QApplication.processEvents()
-        
         try:
-            # If only one mode is selected, process normally
-            if len(selected_modes) == 1:
-                result = self.openai_manager.process_text(transcribed_text, selected_modes[0])
-            else:
-                # If multiple modes are selected, use the process_text_with_multiple_modes method
-                result = self.openai_manager.process_text_with_multiple_modes(transcribed_text, selected_modes)
+            # Get selected mode IDs
+            selected_modes = []
+            selected_mode_names = []
             
-            if result.get("success", False):
-                processed_text = result.get("processed_text", "")
-                suggested_filename = result.get("suggested_filename", "")
+            # Check if mode_list exists and is properly initialized
+            if not hasattr(self, 'mode_list') or not self.mode_list or not hasattr(self.mode_list, 'count'):
+                QMessageBox.warning(self, "Application Error", "Processing modes list is not properly initialized")
+                return
                 
-                self.processed_text.setPlainText(processed_text)
-                
-                # Enable clear and copy buttons for processed text
-                self.clear_processed_button.setEnabled(True)
-                self.copy_processed_button.setEnabled(True)
-                
-                # Generate filename from suggested title
-                if suggested_filename:
-                    self.filename_display.setText(f"{suggested_filename}.md")
-                else:
-                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                    self.filename_display.setText(f"note_{timestamp}.md")
-                
-                self.process_button.setEnabled(True)
-                self.save_button.setEnabled(True)
-                
-                # Update status message based on number of selected modes
-                if len(selected_modes) == 1:
-                    self.statusBar().showMessage(f"Text processed successfully with mode: {selected_mode_names[0]}")
-                else:
-                    self.statusBar().showMessage(f"Text processed successfully with {len(selected_modes)} modes")
+            for i in range(self.mode_list.count()):
+                item = self.mode_list.item(i)
+                if item and item.isSelected():
+                    mode_id = item.data(Qt.ItemDataRole.UserRole)
+                    if mode_id and isinstance(mode_id, str):  # Make sure we have valid data
+                        selected_modes.append(mode_id)
+                        selected_mode_names.append(item.text())
+            
+            if not selected_modes:
+                QMessageBox.warning(self, "Warning", "No processing mode selected")
+                return
+            
+            # Update status message based on number of selected modes
+            if len(selected_modes) == 1:
+                self.statusBar().showMessage(f"Processing text with mode: {selected_mode_names[0]}...")
             else:
-                error_message = result.get("error", "Unknown error")
-                if "requires JSON" in error_message and len(selected_modes) > 1:
-                    QMessageBox.warning(
-                        self, 
-                        "Processing Error", 
-                        "Cannot combine JSON-requiring modes with other modes. Please select either a single JSON mode or multiple non-JSON modes."
-                    )
+                self.statusBar().showMessage(f"Processing text with {len(selected_modes)} modes...")
+            
+            QApplication.processEvents()
+            
+            try:
+                # If only one mode is selected, process normally
+                if len(selected_modes) == 1:
+                    result = self.openai_manager.process_text(transcribed_text, selected_modes[0])
                 else:
-                    QMessageBox.warning(self, "Processing Error", f"Failed to process text: {error_message}")
+                    # If multiple modes are selected, use the process_text_with_multiple_modes method
+                    result = self.openai_manager.process_text_with_multiple_modes(transcribed_text, selected_modes)
+                
+                if result.get("success", False):
+                    processed_text = result.get("processed_text", "")
+                    suggested_filename = result.get("suggested_filename", "")
+                    
+                    self.processed_text.setPlainText(processed_text)
+                    
+                    # Enable clear and copy buttons for processed text
+                    self.clear_processed_button.setEnabled(True)
+                    self.copy_processed_button.setEnabled(True)
+                    
+                    # Generate filename from suggested title
+                    if suggested_filename:
+                        self.filename_display.setText(f"{suggested_filename}.md")
+                    else:
+                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                        self.filename_display.setText(f"note_{timestamp}.md")
+                    
+                    self.process_button.setEnabled(True)
+                    self.save_button.setEnabled(True)
+                    
+                    # Update status message based on number of selected modes
+                    if len(selected_modes) == 1:
+                        self.statusBar().showMessage(f"Text processed successfully with mode: {selected_mode_names[0]}")
+                    else:
+                        self.statusBar().showMessage(f"Text processed successfully with {len(selected_modes)} modes")
+                else:
+                    error_message = result.get("error", "Unknown error")
+                    if "requires JSON" in error_message and len(selected_modes) > 1:
+                        QMessageBox.warning(
+                            self, 
+                            "Processing Error", 
+                            "Cannot combine JSON-requiring modes with other modes. Please select either a single JSON mode or multiple non-JSON modes."
+                        )
+                    else:
+                        QMessageBox.warning(self, "Processing Error", f"Failed to process text: {error_message}")
+                    self.statusBar().showMessage("Error processing text")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Error processing text: {str(e)}")
                 self.statusBar().showMessage("Error processing text")
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Error processing text: {str(e)}")
-            self.statusBar().showMessage("Error processing text")
+            QMessageBox.critical(self, "Application Error", f"An unexpected error occurred: {str(e)}")
+            self.statusBar().showMessage("An unexpected error occurred")
     
     def save_text(self):
         """Save processed text to file"""
@@ -2030,6 +2118,13 @@ class MainWindow(QMainWindow):
         selected_items = self.mode_list.selectedItems()
         count = len(selected_items)
         
+        # Update process button state safely
+        try:
+            has_text = bool(self.transcribed_text.toPlainText().strip())
+            self.process_button.setEnabled(bool(has_text and count > 0))
+        except Exception as e:
+            print(f"Error updating process button state: {e}")
+        
         # Create a more descriptive label
         if count == 0:
             self.selection_count_label.setText("No modes selected")
@@ -2051,6 +2146,12 @@ class MainWindow(QMainWindow):
     def show_manage_selections_dialog(self):
         """Show the manage selections dialog to view and deselect processing modes"""
         dialog = QDialog(self)
+
+        # Safety check for openai_manager
+        if not hasattr(self, 'openai_manager') or not self.openai_manager:
+            QMessageBox.critical(self, "Error", "OpenAI manager not properly initialized")
+            return
+
         dialog.setWindowTitle("Mode Management")
         dialog.setMinimumWidth(650)
         dialog.setMinimumHeight(550)
@@ -2145,6 +2246,12 @@ class MainWindow(QMainWindow):
         # Populate the list with modes and set checkboxes based on current selection
         modes = self.openai_manager.get_available_modes()
         for mode in modes:
+            # Validate mode data
+            if not isinstance(mode, dict) or 'id' not in mode or 'name' not in mode:
+                print(f"Warning: Invalid mode data: {mode}")
+                continue
+
+            mode_id = mode.get('id')
             # Rename "Basic Cleanup" to "Basic Cleanup Only" in the display
             display_name = "Basic Cleanup Only" if mode["id"] == "basic_cleanup" else mode["name"]
             
@@ -2154,7 +2261,7 @@ class MainWindow(QMainWindow):
             
             item = QListWidgetItem(display_name)
             item.setData(Qt.ItemDataRole.UserRole, mode["id"])
-            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
             
             # Check if this mode is selected in the main list
             is_selected = False
@@ -2200,11 +2307,18 @@ class MainWindow(QMainWindow):
         # Connect signals
         mode_list.itemClicked.connect(lambda item: self.show_mode_description(item, details_text))
         dialog_search_edit.textChanged.connect(lambda text: self.filter_dialog_modes(text, mode_list))
-        
+
         # Function to update selection count in the dialog
         def update_dialog_selection_count():
-            selected_count = sum(1 for i in range(mode_list.count()) 
-                               if mode_list.item(i).checkState() == Qt.CheckState.Checked)
+            selected_count = 0
+            try:
+                for i in range(mode_list.count()):
+                    item = mode_list.item(i)
+                    if item and item.checkState() == Qt.CheckState.Checked:
+                        selected_count += 1
+            except Exception as e:
+                print(f"Error counting selected items: {e}")
+                selected_count = 0
             self.dialog_selection_count.setText(f"{selected_count} prompt{'s' if selected_count != 1 else ''} selected")
         
         # Connect item change signal to update count
@@ -2218,17 +2332,38 @@ class MainWindow(QMainWindow):
     
     def select_only_basic_cleanup(self, mode_list):
         """Select only the basic cleanup mode in the list"""
+        # First, determine if this is a checkbox-based list or selection-based list
+        # by checking if the first item has a checkbox
+        has_checkboxes = False
+        if mode_list.count() > 0:
+            first_item = mode_list.item(0)
+            if first_item and hasattr(first_item, 'checkState'):
+                has_checkboxes = True
+        
+        # Handle both checkbox and selection modes
         for i in range(mode_list.count()):
             item = mode_list.item(i)
             mode_id = item.data(Qt.ItemDataRole.UserRole)
+            
             if mode_id == "basic_cleanup":
-                item.setCheckState(Qt.CheckState.Checked)
+                if has_checkboxes:
+                    item.setCheckState(Qt.CheckState.Checked)
+                else:
+                    item.setSelected(True)
             else:
-                item.setCheckState(Qt.CheckState.Unchecked)
+                if has_checkboxes:
+                    item.setCheckState(Qt.CheckState.Unchecked)
+                else:
+                    item.setSelected(False)
     
     def show_mode_description(self, item, details_text):
         """Show the description of the selected mode"""
         mode_id = item.data(Qt.ItemDataRole.UserRole)
+        if not mode_id or not isinstance(mode_id, str):
+            details_text.setText("Invalid mode selected")
+            print(f"Warning: Invalid mode_id: {mode_id}")
+            return
+
         description = self.openai_manager.get_mode_description(mode_id)
         if description:
             details_text.setText(description)
@@ -2240,6 +2375,11 @@ class MainWindow(QMainWindow):
         for i in range(mode_list.count()):
             item = mode_list.item(i)
             mode_id = item.data(Qt.ItemDataRole.UserRole)
+            if not mode_id or not isinstance(mode_id, str):
+                item.setHidden(True)
+                print(f"Warning: Invalid mode_id: {mode_id}")
+                continue
+
             mode_name = item.text().lower()
             
             # Get description for additional search context
@@ -2266,6 +2406,12 @@ class MainWindow(QMainWindow):
     def apply_selection_changes(self, dialog, mode_list):
         """Apply the selection changes from the manage selections dialog"""
         # Track changes for status message
+        # Safety check for mode_list
+        if not mode_list or not hasattr(mode_list, 'count'):
+            QMessageBox.critical(self, "Error", "Mode list not properly initialized")
+            dialog.reject()
+            return
+
         previously_selected = set()
         for i in range(self.mode_list.count()):
             item = self.mode_list.item(i)
@@ -2281,7 +2427,11 @@ class MainWindow(QMainWindow):
             item = mode_list.item(i)
             if item.checkState() == Qt.CheckState.Checked:
                 mode_id = item.data(Qt.ItemDataRole.UserRole)
-                modes_to_select.append(mode_id)
+                if mode_id and isinstance(mode_id, str):
+                    modes_to_select.append(mode_id)
+                else:
+                    print(f"Warning: Invalid mode_id: {mode_id}")
+                    continue
         
         # Select the modes in the main list
         for i in range(self.mode_list.count()):
@@ -2295,7 +2445,7 @@ class MainWindow(QMainWindow):
         
         # Enable the process button if there's transcribed text
         has_text = bool(self.transcribed_text.toPlainText().strip())
-        self.process_button.setEnabled(has_text and self.mode_list.selectedItems())
+        self.process_button.setEnabled(bool(has_text and len(modes_to_select) > 0))
         
         # Provide feedback about the changes
         newly_selected = set(modes_to_select)
