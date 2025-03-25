@@ -380,67 +380,41 @@ class MainWindow(QMainWindow):
         
         # Add description text
         process_description = QLabel(
-            "Choose a formatting instruction to improve and process the dictated text. If you don't have a specific format in mind, using the default basic cleanup setting is recommended."
+            "Choose formatting instructions to improve and process the dictated text. The basic cleanup mode is selected by default."
         )
         process_description.setStyleSheet("font-style: italic; color: #666; margin-bottom: 6px; font-size: 12px;")
         process_description.setWordWrap(True)
         process_description.setFixedHeight(40)  # Set fixed height to prevent overlap
         right_column.addWidget(process_description)
         
-        # Processing mode selection
-        mode_layout = QVBoxLayout()  # Changed to vertical layout to stack search box and list
-        mode_layout.setSpacing(12)  # Further increase spacing between elements
-        mode_label = QLabel("Processing Mode(s):")
-        mode_label.setStyleSheet("font-weight: bold; font-size: 13px;")
-        mode_layout.addWidget(mode_label)
+        # Processing mode selection - replaced with a button to open modal
+        mode_layout = QVBoxLayout()
+        mode_layout.setSpacing(12)
         
-        # Add search box for processing modes
-        search_layout = QHBoxLayout()
-        search_layout.setSpacing(10)  # Increase spacing
-        search_label = QLabel("Search:")
-        search_label.setFixedWidth(60)  # Set fixed width to prevent layout shifts
-        self.mode_search_edit = QLineEdit()
-        self.mode_search_edit.setPlaceholderText("Search processing modes...")
-        self.mode_search_edit.textChanged.connect(self.filter_processing_modes)
-        search_layout.addWidget(search_label)
-        search_layout.addWidget(self.mode_search_edit)
-        mode_layout.addLayout(search_layout)
+        # Create a horizontal layout for the mode selection info and button
+        mode_info_layout = QHBoxLayout()
         
-        # Add selection count indicator above the list
-        selection_info_layout = QHBoxLayout()
-        selection_info_layout.setSpacing(15)  # Further increase spacing
-        self.selection_count_label = QLabel("0 modes selected")
+        # Add selection count indicator
+        self.selection_count_label = QLabel("1 mode selected (Basic Cleanup)")
         self.selection_count_label.setStyleSheet("font-weight: bold; color: #1565C0;")
-        selection_info_layout.addWidget(self.selection_count_label)
+        mode_info_layout.addWidget(self.selection_count_label)
         
-        self.manage_selections_button = QPushButton("Manage Selections")
-        self.manage_selections_button.setStyleSheet("padding: 5px 10px;")
-        self.manage_selections_button.clicked.connect(self.show_manage_selections_dialog)
-        self.manage_selections_button.setEnabled(False)
-        selection_info_layout.addWidget(self.manage_selections_button)
+        mode_info_layout.addStretch()
         
-        mode_layout.addLayout(selection_info_layout)
+        # Add button to open the modal dialog
+        self.manage_modes_button = QPushButton("Mode Management")
+        self.manage_modes_button.setStyleSheet("padding: 5px 10px; background-color: #2196F3; color: white; font-weight: bold; font-size: 12px;")
+        self.manage_modes_button.clicked.connect(self.show_manage_selections_dialog)
+        mode_info_layout.addWidget(self.manage_modes_button)
         
-        # Replace QComboBox with QListWidget for multiple selection
+        mode_layout.addLayout(mode_info_layout)
+        
+        # Create a hidden list widget to store the selected modes
+        # This won't be displayed but will maintain the selection state
         self.mode_list = QListWidget()
         self.mode_list.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
-        self.mode_list.setMinimumHeight(220)  # Increased minimum height to show more items
-        self.mode_list.setMaximumHeight(250)  # Set maximum height to prevent excessive expansion
-        # Use a left-side bar indicator for selection instead of full background
-        self.mode_list.setStyleSheet("""
-            QListWidget::item { 
-                padding: 5px; 
-                border-bottom: 1px solid #e0e0e0;
-            }
-            QListWidget::item:selected { 
-                border-left: 4px solid #2196F3;
-                padding-left: 2px;
-                background-color: #E3F2FD;
-                color: #000000;
-            }
-        """)
+        self.mode_list.setVisible(False)  # Hide the list widget
         self.mode_list.itemSelectionChanged.connect(self.update_mode_selection_count)
-        mode_layout.addWidget(self.mode_list)
         
         right_column.addLayout(mode_layout)
         
@@ -1222,20 +1196,25 @@ class MainWindow(QMainWindow):
             # Add the item to the list
             self.mode_list.addItem(item)
         
-        # Set fixed height based on number of items (with a maximum)
-        num_items = min(7, self.mode_list.count())  # Reduced to show fewer items at once
-        item_height = 35  # Increased height per item for better readability
-        self.mode_list.setFixedHeight(num_items * item_height + 15)  # Added more padding
-        
         # Select "Basic Cleanup" by default
+        basic_cleanup_selected = False
         for i in range(self.mode_list.count()):
             item = self.mode_list.item(i)
             if item.data(Qt.ItemDataRole.UserRole) == "basic_cleanup":
                 item.setSelected(True)
+                basic_cleanup_selected = True
                 break
+        
+        # If basic_cleanup wasn't found, select the first item
+        if not basic_cleanup_selected and self.mode_list.count() > 0:
+            self.mode_list.item(0).setSelected(True)
                 
         # Update the selection count
         self.update_mode_selection_count()
+        
+        # Enable the process button if there's transcribed text
+        has_text = bool(self.transcribed_text.toPlainText().strip())
+        self.process_button.setEnabled(has_text and self.mode_list.selectedItems())
     
     def populate_audio_devices(self):
         """Populate the list of audio devices"""
@@ -1886,11 +1865,19 @@ class MainWindow(QMainWindow):
     
     def update_mode_selection_count(self):
         """Update the selection count label with the number of selected modes"""
-        count = len(self.mode_list.selectedItems())
-        self.selection_count_label.setText(f"{count} mode{'s' if count != 1 else ''} selected")
+        selected_items = self.mode_list.selectedItems()
+        count = len(selected_items)
         
-        # Enable/disable the manage selections button based on selection count
-        self.manage_selections_button.setEnabled(count > 0)
+        # Create a more descriptive label
+        if count == 0:
+            self.selection_count_label.setText("No modes selected")
+        elif count == 1:
+            mode_name = selected_items[0].text()
+            self.selection_count_label.setText(f"1 mode selected: {mode_name}")
+        else:
+            # If more than one mode is selected, show the count and the first mode with "..."
+            first_mode = selected_items[0].text()
+            self.selection_count_label.setText(f"{count} modes selected: {first_mode}, ...")
         
         # Enable/disable the process button based on selection count and transcribed text
         has_text = bool(self.transcribed_text.toPlainText().strip())
@@ -1899,21 +1886,29 @@ class MainWindow(QMainWindow):
     def show_manage_selections_dialog(self):
         """Show the manage selections dialog to view and deselect processing modes"""
         dialog = QDialog(self)
-        dialog.setWindowTitle("Manage Processing Mode Selections")
-        dialog.setMinimumWidth(600)
-        dialog.setMinimumHeight(500)
+        dialog.setWindowTitle("Mode Management")
+        dialog.setMinimumWidth(650)
+        dialog.setMinimumHeight(550)
         
         layout = QVBoxLayout(dialog)
         
-        # Add description text
-        description = QLabel("Select or deselect processing modes. Multiple modes will be applied in sequence.")
-        description.setStyleSheet("font-style: italic; color: #666; margin-bottom: 10px;")
+        # Add header and description text
+        header = QLabel("Processing Modes")
+        header.setStyleSheet("font-size: 16px; font-weight: bold; margin-bottom: 5px;")
+        layout.addWidget(header)
+        
+        description = QLabel(
+            "Select the processing modes you want to apply to your text. Multiple modes will be applied in sequence. "
+            "The basic cleanup mode is recommended and selected by default."
+        )
+        description.setStyleSheet("font-style: italic; color: #666; margin-bottom: 15px;")
         description.setWordWrap(True)
         layout.addWidget(description)
         
         # Add search box for filtering modes in the dialog
         search_layout = QHBoxLayout()
         search_label = QLabel("Search:")
+        search_label.setFixedWidth(60)
         dialog_search_edit = QLineEdit()
         dialog_search_edit.setPlaceholderText("Search processing modes...")
         search_layout.addWidget(search_label)
@@ -1923,15 +1918,31 @@ class MainWindow(QMainWindow):
         # Create list widget with checkboxes
         mode_list = QListWidget()
         mode_list.setAlternatingRowColors(True)
+        mode_list.setStyleSheet("""
+            QListWidget {
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                padding: 5px;
+            }
+            QListWidget::item {
+                padding: 8px;
+                border-bottom: 1px solid #eee;
+            }
+            QListWidget::item:alternate {
+                background-color: #f9f9f9;
+            }
+        """)
         layout.addWidget(mode_list)
         
         # Add a details text area to show mode descriptions
         details_label = QLabel("Mode Description:")
+        details_label.setStyleSheet("font-weight: bold; margin-top: 10px;")
         layout.addWidget(details_label)
         
         details_text = QTextEdit()
         details_text.setReadOnly(True)
-        details_text.setMaximumHeight(100)
+        details_text.setMaximumHeight(120)
+        details_text.setStyleSheet("border: 1px solid #ccc; border-radius: 4px; padding: 5px;")
         details_text.setPlaceholderText("Select a mode to view its description")
         layout.addWidget(details_text)
         
@@ -1950,6 +1961,10 @@ class MainWindow(QMainWindow):
                     is_selected = True
                     break
             
+            # Set tooltip to show description
+            tooltip_text = mode.get("description", mode.get("prompt", "")[:100] + "...").replace("\n", " ")
+            item.setToolTip(tooltip_text)
+            
             item.setCheckState(Qt.CheckState.Checked if is_selected else Qt.CheckState.Unchecked)
             mode_list.addItem(item)
         
@@ -1957,21 +1972,31 @@ class MainWindow(QMainWindow):
         button_layout = QHBoxLayout()
         
         select_all_button = QPushButton("Select All")
+        select_all_button.setStyleSheet("padding: 6px 12px;")
         select_all_button.clicked.connect(lambda: self.select_all_modes(mode_list))
         button_layout.addWidget(select_all_button)
         
         deselect_all_button = QPushButton("Deselect All")
+        deselect_all_button.setStyleSheet("padding: 6px 12px;")
         deselect_all_button.clicked.connect(lambda: self.deselect_all_modes(mode_list))
         button_layout.addWidget(deselect_all_button)
+        
+        # Add a button to select only basic cleanup
+        basic_cleanup_button = QPushButton("Select Only Basic Cleanup")
+        basic_cleanup_button.setStyleSheet("padding: 6px 12px;")
+        basic_cleanup_button.clicked.connect(lambda: self.select_only_basic_cleanup(mode_list))
+        button_layout.addWidget(basic_cleanup_button)
         
         button_layout.addStretch()
         
         # Add apply and cancel buttons
         apply_button = QPushButton("Apply")
+        apply_button.setStyleSheet("padding: 6px 12px; background-color: #2196F3; color: white; font-weight: bold;")
         apply_button.clicked.connect(lambda: self.apply_selection_changes(dialog, mode_list))
         button_layout.addWidget(apply_button)
         
         cancel_button = QPushButton("Cancel")
+        cancel_button.setStyleSheet("padding: 6px 12px;")
         cancel_button.clicked.connect(dialog.reject)
         button_layout.addWidget(cancel_button)
         
@@ -1983,6 +2008,16 @@ class MainWindow(QMainWindow):
         
         # Show the dialog
         dialog.exec()
+    
+    def select_only_basic_cleanup(self, mode_list):
+        """Select only the basic cleanup mode in the list"""
+        for i in range(mode_list.count()):
+            item = mode_list.item(i)
+            mode_id = item.data(Qt.ItemDataRole.UserRole)
+            if mode_id == "basic_cleanup":
+                item.setCheckState(Qt.CheckState.Checked)
+            else:
+                item.setCheckState(Qt.CheckState.Unchecked)
     
     def show_mode_description(self, item, details_text):
         """Show the description of the selected mode"""
