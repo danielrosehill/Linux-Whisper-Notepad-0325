@@ -182,23 +182,191 @@ class OpenAIManager:
             if not self.client:
                 self.client = openai.OpenAI(api_key=self.api_key)
             
-            with open(audio_file_path, "rb") as audio_file:
-                transcription = self.client.audio.transcriptions.create(
-                    model=self.config.get("whisper_model", "whisper-1"),
-                    file=audio_file
-                )
+            # Check file size
+            file_size = os.path.getsize(audio_file_path)
+            max_size = 24 * 1024 * 1024  # 24MB (leaving some margin below the 25MB limit)
             
-            return {
-                "success": True,
-                "text": transcription.text,
-                "error": ""
-            }
+            if file_size > max_size:
+                # File is too large, use chunking approach
+                return self._transcribe_large_audio(audio_file_path)
+            else:
+                # File is within size limits, transcribe normally
+                with open(audio_file_path, "rb") as audio_file:
+                    transcription = self.client.audio.transcriptions.create(
+                        model=self.config.get("whisper_model", "whisper-1"),
+                        file=audio_file
+                    )
+                
+                return {
+                    "success": True,
+                    "text": transcription.text,
+                    "error": ""
+                }
         except Exception as e:
             return {
                 "success": False,
                 "error": str(e),
                 "text": ""
             }
+    
+    def _transcribe_large_audio(self, audio_file_path):
+        """
+        Transcribe large audio files by splitting into chunks and transcribing each chunk.
+        
+        Args:
+            audio_file_path (str): Path to the audio file
+            
+        Returns:
+            dict: Transcription result with success flag, text, and error message
+        """
+        try:
+            # Split the audio file into chunks
+            chunk_paths = self._split_audio_file(audio_file_path)
+            
+            if not chunk_paths:
+                return {
+                    "success": False,
+                    "error": "Failed to split audio file into chunks",
+                    "text": ""
+                }
+            
+            # Transcribe each chunk
+            transcriptions = []
+            for i, chunk_path in enumerate(chunk_paths):
+                try:
+                    with open(chunk_path, "rb") as audio_file:
+                        transcription = self.client.audio.transcriptions.create(
+                            model=self.config.get("whisper_model", "whisper-1"),
+                            file=audio_file
+                        )
+                    transcriptions.append(transcription.text)
+                except Exception as e:
+                    # Log error but continue with other chunks
+                    print(f"Error transcribing chunk {i+1}: {e}")
+            
+            # Clean up temporary chunk files
+            for chunk_path in chunk_paths:
+                try:
+                    if os.path.exists(chunk_path):
+                        os.unlink(chunk_path)
+                except Exception as e:
+                    print(f"Error removing temporary chunk file {chunk_path}: {e}")
+            
+            # Combine transcriptions
+            if transcriptions:
+                combined_text = " ".join(transcriptions)
+                return {
+                    "success": True,
+                    "text": combined_text,
+                    "error": ""
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": "Failed to transcribe any audio chunks",
+                    "text": ""
+                }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Error in chunked transcription: {str(e)}",
+                "text": ""
+            }
+    
+    def _split_audio_file(self, audio_file_path, max_chunk_size_mb=20):
+        """
+        Split an audio file into smaller chunks.
+        
+        Args:
+            audio_file_path (str): Path to the audio file
+            max_chunk_size_mb (int): Maximum size of each chunk in MB
+            
+        Returns:
+            list: List of paths to the chunk files
+        """
+        try:
+            import wave
+            import numpy as np
+            from pydub import AudioSegment
+            
+            # Load the audio file
+            audio = AudioSegment.from_wav(audio_file_path)
+            
+            # Calculate chunk duration based on file size and audio properties
+            file_size = os.path.getsize(audio_file_path)
+            total_duration_ms = len(audio)
+            
+            # Calculate how many chunks we need
+            num_chunks = max(1, int(file_size / (max_chunk_size_mb * 1024 * 1024)) + 1)
+            
+            # Calculate chunk duration in milliseconds
+            chunk_duration_ms = total_duration_ms // num_chunks
+            
+            # Create chunks
+            chunk_paths = []
+            for i in range(num_chunks):
+                start_ms = i * chunk_duration_ms
+                end_ms = min((i + 1) * chunk_duration_ms, total_duration_ms)
+                
+                # Extract chunk
+                chunk = audio[start_ms:end_ms]
+                
+                # Save chunk to temporary file
+                chunk_path = f"{audio_file_path}_chunk_{i}.wav"
+                chunk.export(chunk_path, format="wav")
+                chunk_paths.append(chunk_path)
+            
+            return chunk_paths
+        except ImportError:
+            # If pydub is not available, fall back to a simpler method using wave
+            try:
+                import wave
+                import numpy as np
+                
+                with wave.open(audio_file_path, 'rb') as wf:
+                    # Get audio parameters
+                    channels = wf.getnchannels()
+                    sample_width = wf.getsampwidth()
+                    framerate = wf.getframerate()
+                    n_frames = wf.getnframes()
+                    
+                    # Calculate bytes per second
+                    bytes_per_second = framerate * channels * sample_width
+                    
+                    # Calculate chunk duration in seconds based on max size
+                    max_chunk_size_bytes = max_chunk_size_mb * 1024 * 1024
+                    chunk_duration_seconds = max(1, int(max_chunk_size_bytes / bytes_per_second))
+                    
+                    # Calculate frames per chunk
+                    frames_per_chunk = chunk_duration_seconds * framerate
+                    
+                    # Calculate number of chunks
+                    num_chunks = (n_frames + frames_per_chunk - 1) // frames_per_chunk
+                    
+                    chunk_paths = []
+                    for i in range(num_chunks):
+                        # Create a new WAV file for this chunk
+                        chunk_path = f"{audio_file_path}_chunk_{i}.wav"
+                        with wave.open(chunk_path, 'wb') as chunk_wf:
+                            chunk_wf.setnchannels(channels)
+                            chunk_wf.setsampwidth(sample_width)
+                            chunk_wf.setframerate(framerate)
+                            
+                            # Read and write frames for this chunk
+                            start_frame = i * frames_per_chunk
+                            wf.setpos(start_frame)
+                            frames_to_read = min(frames_per_chunk, n_frames - start_frame)
+                            chunk_wf.writeframes(wf.readframes(frames_to_read))
+                        
+                        chunk_paths.append(chunk_path)
+                
+                return chunk_paths
+            except Exception as e:
+                print(f"Error splitting audio file: {e}")
+                return []
+        except Exception as e:
+            print(f"Error splitting audio file: {e}")
+            return []
     
     def _get_audio_duration(self, audio_file_path):
         """Get the duration of an audio file in seconds"""
