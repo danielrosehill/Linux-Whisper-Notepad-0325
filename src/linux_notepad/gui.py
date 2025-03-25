@@ -13,7 +13,10 @@ from PyQt6.QtWidgets import (
     QListWidget, QListWidgetItem, QDialog, QDialogButtonBox, QInputDialog, QApplication,
     QTreeWidget, QTreeWidgetItem
 )
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QThread
+from PyQt6.QtCore import (
+    Qt, QSize, QThread, pyqtSignal, QObject, 
+    QRunnable, pyqtSlot, QThreadPool, QTimer
+)
 from PyQt6.QtGui import QIcon, QFont, QClipboard
 from datetime import datetime
 
@@ -89,9 +92,8 @@ class MainWindow(QMainWindow):
         
         # Create the transcribed_text widget early to ensure it's available
         self.transcribed_text = QTextEdit()
-        self.transcribed_text.setReadOnly(True)
         self.transcribed_text.setMinimumHeight(200)
-        self.transcribed_text.setPlaceholderText("Transcribed text will appear here")
+        self.transcribed_text.setPlaceholderText("Transcribed text will appear here. You can edit the text before processing.")
         
         # Initialize state variables
         self.recording_time = 0
@@ -295,6 +297,11 @@ class MainWindow(QMainWindow):
         # Transcribed text display
         left_column.addWidget(self.transcribed_text)
         
+        # Add edit hint for transcribed text
+        transcribe_edit_hint = QLabel("You can edit the transcribed text before processing.")
+        transcribe_edit_hint.setStyleSheet("font-style: italic; color: #666; font-size: 11px;")
+        left_column.addWidget(transcribe_edit_hint)
+        
         # Add clear and copy buttons for transcribed text
         transcribe_buttons_layout = QHBoxLayout()
         
@@ -365,10 +372,14 @@ class MainWindow(QMainWindow):
         
         # Processed text display
         self.processed_text = QTextEdit()
-        self.processed_text.setReadOnly(True)
         self.processed_text.setMinimumHeight(200)
-        self.processed_text.setPlaceholderText("Processed text will appear here")
+        self.processed_text.setPlaceholderText("Processed text will appear here. You can edit the text before saving.")
         right_column.addWidget(self.processed_text)
+        
+        # Add edit hint for processed text
+        processed_edit_hint = QLabel("You can edit the processed text before saving.")
+        processed_edit_hint.setStyleSheet("font-style: italic; color: #666; font-size: 11px;")
+        right_column.addWidget(processed_edit_hint)
         
         # Add clear and copy buttons for processed text
         processed_buttons_layout = QHBoxLayout()
@@ -1130,60 +1141,53 @@ class MainWindow(QMainWindow):
         if not self.audio_manager.has_recording():
             QMessageBox.warning(self, "Error", "No audio data to transcribe.")
             return
-            
-        # Save audio to temporary file
-        temp_file = self.audio_manager.save_to_temp_file()
-        if not temp_file:
-            QMessageBox.warning(self, "Error", "No audio data to transcribe.")
-            return
         
-        # Check if API key is set
-        if not self.openai_manager.api_key:
-            QMessageBox.warning(self, "API Key Required", "Please set your OpenAI API key in the Settings tab.")
-            self.tab_widget.setCurrentIndex(1)  # Switch to settings tab
-            return
+        # First, transcribe the audio
+        self.statusBar().showMessage("Transcribing audio...")
+        QApplication.processEvents()
         
-        # Show progress
-        self.progress_bar.setVisible(True)
-        self.progress_bar.setValue(0)
+        # Disable buttons during transcription
         self.transcribe_button.setEnabled(False)
         self.transcribe_process_button.setEnabled(False)
         
-        # Start transcription in background thread
-        self.transcription_worker = TranscriptionWorker(self.openai_manager, temp_file)
-        self.transcription_worker.progress.connect(self.update_transcription_progress)
-        self.transcription_worker.finished.connect(self._handle_transcribe_and_process_result)
-        self.transcription_worker.start()
+        # Start the transcription worker
+        self.transcription_worker = TranscriptionWorker(
+            self.openai_manager,
+            self.audio_manager.get_temp_file_path()
+        )
+        self.transcription_worker.signals.result.connect(self.handle_transcription_result_for_processing)
+        self.transcription_worker.signals.error.connect(self.handle_transcription_error)
+        self.transcription_worker.signals.finished.connect(self.handle_transcription_finished)
+        
+        # Start the worker
+        self.threadpool.start(self.transcription_worker)
     
-    def _handle_transcribe_and_process_result(self, result):
-        """Handle transcription result and then process the text"""
-        # Hide progress
-        self.progress_bar.setVisible(False)
-        self.transcribe_button.setEnabled(True)
-        self.transcribe_process_button.setEnabled(True)
-        
-        # Safety check to ensure transcribed_text is properly initialized
-        if not hasattr(self.transcribed_text, 'setPlainText'):
-            print("Error: self.transcribed_text is not properly initialized as a QTextEdit")
-            QMessageBox.critical(self, "Application Error", "Internal error: Text widget not properly initialized")
-            return
-        
-        if isinstance(result, dict) and result.get("success", False):
-            # Update transcribed text
-            transcribed_text_content = result.get("text", "")
-            if transcribed_text_content:
-                self.transcribed_text.setPlainText(transcribed_text_content)
-                
-                # Process the transcribed text
-                self.process_text()
-            else:
-                QMessageBox.warning(self, "Transcription Error", "No text was transcribed from the audio.")
-                self.statusBar().showMessage("Transcription failed")
+    def handle_transcription_result_for_processing(self, result):
+        """Handle transcription result and proceed to processing"""
+        if result.get("success", False):
+            transcribed_text = result.get("text", "")
+            
+            # Set the transcribed text in the text edit
+            self.transcribed_text.setPlainText(transcribed_text)
+            
+            # Enable clear and copy buttons for transcribed text
+            self.clear_transcribed_button.setEnabled(True)
+            self.copy_transcribed_button.setEnabled(True)
+            
+            # Update status
+            self.statusBar().showMessage("Transcription complete. Processing text...")
+            
+            # Give the user a brief moment to see the transcription before processing
+            # This also allows them to cancel processing if needed
+            QTimer.singleShot(500, self.process_text)
         else:
-            # Show error message
-            error_message = result.get("error", "Unknown error") if isinstance(result, dict) else "Unknown error"
+            error_message = result.get("error", "Unknown error")
             QMessageBox.warning(self, "Transcription Error", f"Failed to transcribe audio: {error_message}")
-            self.statusBar().showMessage("Transcription failed")
+            self.statusBar().showMessage("Error transcribing audio")
+            
+            # Re-enable buttons
+            self.transcribe_button.setEnabled(True)
+            self.transcribe_process_button.setEnabled(True)
     
     def update_transcription_progress(self, value):
         """Update transcription progress bar"""
@@ -1252,6 +1256,8 @@ class MainWindow(QMainWindow):
     
     def process_text(self):
         """Process the transcribed text using the selected mode"""
+        # Get the current text from the transcribed_text widget
+        # This ensures any edits made by the user are included
         transcribed_text = self.transcribed_text.toPlainText()
         if not transcribed_text:
             QMessageBox.warning(self, "Warning", "No transcribed text to process")
@@ -1319,7 +1325,8 @@ class MainWindow(QMainWindow):
         # Full file path
         file_path = os.path.join(output_dir, filename)
         
-        # Get text to save
+        # Get text to save from the processed_text widget
+        # This ensures any edits made by the user are included in the saved file
         text = self.processed_text.toPlainText()
         
         try:
@@ -1328,8 +1335,10 @@ class MainWindow(QMainWindow):
                 f.write(text)
             
             QMessageBox.information(self, "Success", f"File saved successfully:\n{file_path}")
+            self.statusBar().showMessage(f"File saved: {filename}")
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Failed to save file: {str(e)}")
+            self.statusBar().showMessage("Error saving file")
     
     def save_api_settings(self):
         """Save OpenAI API settings"""
