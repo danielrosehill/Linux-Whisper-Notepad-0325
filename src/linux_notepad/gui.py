@@ -27,6 +27,8 @@ from .openai_api import OpenAIManager
 class TranscriptionWorker(QThread):
     """Worker thread for audio transcription"""
     progress = pyqtSignal(int)
+    chunk_progress = pyqtSignal(int, int)  # Current chunk, total chunks
+    status_update = pyqtSignal(str)  # Status message
     finished = pyqtSignal(dict)  # Ensure we always emit a dict
     
     def __init__(self, openai_manager, audio_file_path):
@@ -37,23 +39,45 @@ class TranscriptionWorker(QThread):
     def run(self):
         """Run the transcription process"""
         try:
-            # Report progress
+            # Report initial progress
             self.progress.emit(10)
+            self.status_update.emit("Starting transcription...")
             
-            # Transcribe audio
-            result = self.openai_manager.transcribe_audio(self.audio_file_path)
+            # Get file size
+            file_size = os.path.getsize(self.audio_file_path)
+            max_size = 24 * 1024 * 1024  # 24MB (same as in OpenAIManager)
             
-            # Ensure result is a properly formatted dictionary
-            if not isinstance(result, dict):
-                result = {"success": False, "error": "Invalid result format", "text": ""}
+            if file_size > max_size:
+                # Large file, will be processed in chunks
+                self.status_update.emit("Large audio file detected. Splitting into chunks...")
+                
+                # Monitor for chunk progress updates
+                def chunk_callback(current, total):
+                    self.chunk_progress.emit(current, total)
+                    # Also update overall progress (30% for splitting, 60% for transcribing chunks)
+                    progress_value = 30 + int((current / total) * 60)
+                    self.progress.emit(progress_value)
+                    self.status_update.emit(f"Transcribing chunk {current} of {total}...")
+                
+                # Pass the callback to the transcribe method
+                result = self.openai_manager.transcribe_audio(
+                    self.audio_file_path, 
+                    chunk_callback=chunk_callback
+                )
+            else:
+                # Normal file, standard transcription
+                self.status_update.emit("Transcribing audio...")
+                result = self.openai_manager.transcribe_audio(self.audio_file_path)
             
-            # Report progress
+            # Report final progress
             self.progress.emit(100)
+            self.status_update.emit("Transcription complete")
             
             # Emit result
             self.finished.emit(result)
         except Exception as e:
             # Handle any exceptions
+            self.status_update.emit(f"Error: {str(e)}")
             error_result = {"success": False, "error": str(e), "text": ""}
             self.finished.emit(error_result)
 
@@ -412,7 +436,9 @@ class MainWindow(QMainWindow):
         
         # Add description text
         process_description = QLabel(
-            "Choose formatting instructions to improve and process the dictated text. The basic cleanup mode is selected by default."
+            "Choose formatting instructions to improve and process the dictated text. "
+            "Each prompt defines how your text will be processed. "
+            "Prompts marked with 'JSON' will return structured data."
         )
         process_description.setStyleSheet("font-style: italic; color: #333; margin-bottom: 6px; font-size: 12px;")
         process_description.setWordWrap(True)
@@ -574,7 +600,7 @@ class MainWindow(QMainWindow):
         
         # Audio device settings
         audio_group = QGroupBox("Audio Device Settings")
-        audio_layout = QFormLayout(audio_group)
+        audio_settings_layout = QFormLayout(audio_group)
         
         # Audio device selection in settings
         device_settings_layout = QHBoxLayout()
@@ -588,12 +614,12 @@ class MainWindow(QMainWindow):
         refresh_settings_button.clicked.connect(self.refresh_settings_audio_devices)
         device_settings_layout.addWidget(refresh_settings_button)
         
-        audio_layout.addRow("Default Audio Device:", device_settings_layout)
+        audio_settings_layout.addRow("Default Audio Device:", device_settings_layout)
         
         # Silence removal settings
         self.scrub_silences_checkbox = QCheckBox("Scrub Silences")
         self.scrub_silences_checkbox.setToolTip("Remove long pauses from audio before transcription")
-        audio_layout.addRow("Audio Processing:", self.scrub_silences_checkbox)
+        audio_settings_layout.addRow("Audio Processing:", self.scrub_silences_checkbox)
         
         # Silence threshold settings
         silence_settings_layout = QHBoxLayout()
@@ -605,11 +631,27 @@ class MainWindow(QMainWindow):
         self.min_silence_duration_edit.setPlaceholderText("Default: 1.0 seconds")
         silence_settings_layout.addWidget(self.min_silence_duration_edit)
         
-        audio_layout.addRow("Silence Threshold / Min Duration:", silence_settings_layout)
+        audio_settings_layout.addRow("Silence Threshold / Min Duration:", silence_settings_layout)
+        
+        # Audio format selection
+        format_layout = QHBoxLayout()
+        format_label = QLabel("Audio Format:")
+        self.format_combo = QComboBox()
+        self.format_combo.addItem("MP3 (Smaller files)", "mp3")
+        self.format_combo.addItem("WAV (Higher quality)", "wav")
+        
+        # Set default format based on config
+        default_format = self.config.get("audio_format", "mp3")
+        default_index = 0 if default_format == "mp3" else 1
+        self.format_combo.setCurrentIndex(default_index)
+        
+        format_layout.addWidget(format_label)
+        format_layout.addWidget(self.format_combo)
+        audio_settings_layout.addRow("Audio Format:", format_layout)
         
         self.save_audio_settings_button = QPushButton("Save Audio Settings")
         self.save_audio_settings_button.clicked.connect(self.save_default_audio_device)
-        audio_layout.addRow("", self.save_audio_settings_button)
+        audio_settings_layout.addRow("", self.save_audio_settings_button)
         
         # Output directory settings
         output_group = QGroupBox("Output Settings")
@@ -1232,6 +1274,13 @@ class MainWindow(QMainWindow):
         min_silence_duration = self.config.get("min_silence_duration", 1.0)
         self.min_silence_duration_edit.setText(str(min_silence_duration))
         
+        # Load audio format
+        audio_format = self.config.get("audio_format", "mp3")
+        for i in range(self.format_combo.count()):
+            if self.format_combo.itemData(i) == audio_format:
+                self.format_combo.setCurrentIndex(i)
+                break
+        
         # Always use basic_cleanup as default processing mode
         # We don't load the last_used_mode from config anymore
         for i in range(self.mode_list.count()):
@@ -1401,8 +1450,11 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Error", "No audio data to transcribe.")
             return
             
+        # Get the preferred audio format from config
+        audio_format = self.config.get("audio_format", "mp3")
+        
         # Save audio to temporary file
-        temp_file = self.audio_manager.save_to_temp_file()
+        temp_file = self.audio_manager.save_to_temp_file(format=audio_format)
         if not temp_file:
             QMessageBox.warning(self, "Error", "No audio data to transcribe.")
             return
@@ -1422,6 +1474,8 @@ class MainWindow(QMainWindow):
         # Start transcription in background thread
         self.transcription_worker = TranscriptionWorker(self.openai_manager, temp_file)
         self.transcription_worker.progress.connect(self.update_transcription_progress)
+        self.transcription_worker.chunk_progress.connect(self.update_chunk_progress)
+        self.transcription_worker.status_update.connect(self.update_transcription_status)
         self.transcription_worker.finished.connect(self._handle_transcription_result)
         self.transcription_worker.start()
     
@@ -1431,8 +1485,11 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Error", "No audio data to transcribe.")
             return
         
+        # Get the preferred audio format from config
+        audio_format = self.config.get("audio_format", "mp3")
+        
         # Save audio to temporary file
-        temp_file = self.audio_manager.save_to_temp_file()
+        temp_file = self.audio_manager.save_to_temp_file(format=audio_format)
         if not temp_file:
             QMessageBox.warning(self, "Error", "No audio data to transcribe.")
             return
@@ -1452,6 +1509,8 @@ class MainWindow(QMainWindow):
         # Start transcription in background thread
         self.transcription_worker = TranscriptionWorker(self.openai_manager, temp_file)
         self.transcription_worker.progress.connect(self.update_transcription_progress)
+        self.transcription_worker.chunk_progress.connect(self.update_chunk_progress)
+        self.transcription_worker.status_update.connect(self.update_transcription_status)
         self.transcription_worker.finished.connect(self.handle_transcription_result_for_processing)
         self.transcription_worker.start()
     
@@ -1485,6 +1544,14 @@ class MainWindow(QMainWindow):
     def update_transcription_progress(self, value):
         """Update transcription progress bar"""
         self.progress_bar.setValue(value)
+    
+    def update_chunk_progress(self, current, total):
+        """Update progress information for chunked transcription"""
+        self.statusBar().showMessage(f"Transcribing chunk {current} of {total}...")
+    
+    def update_transcription_status(self, status):
+        """Update transcription status message"""
+        self.statusBar().showMessage(status)
     
     def _handle_transcription_result(self, result):
         """Handle the transcription result"""
@@ -1843,6 +1910,10 @@ class MainWindow(QMainWindow):
                 self.config.set("min_silence_duration", 1.0)
                 self.min_silence_duration_edit.setText("1.0")
             
+            # Save audio format
+            audio_format = self.format_combo.currentData()
+            self.config.set("audio_format", audio_format)
+            
             # Also update the device in the main tab
             for i in range(self.device_combo.count()):
                 if self.device_combo.itemData(i) == current_device_index:
@@ -2008,6 +2079,7 @@ class MainWindow(QMainWindow):
         search_label.setFixedWidth(60)
         dialog_search_edit = QLineEdit()
         dialog_search_edit.setPlaceholderText("Search processing modes...")
+        dialog_search_edit.textChanged.connect(self.filter_dialog_modes)
         search_layout.addWidget(search_label)
         search_layout.addWidget(dialog_search_edit)
         layout.addLayout(search_layout)

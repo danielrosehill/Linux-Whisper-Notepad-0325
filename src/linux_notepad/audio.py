@@ -9,6 +9,7 @@ import tempfile
 import numpy as np
 import pyaudio
 from datetime import datetime
+from pydub import AudioSegment
 
 class AudioManager:
     """Audio recording and device management"""
@@ -256,10 +257,22 @@ class AudioManager:
         self.temp_files = []
         return True
     
-    def save_to_temp_file(self):
-        """Save recorded audio to temporary file"""
+    def save_to_temp_file(self, format="mp3"):
+        """
+        Save recorded audio to temporary file
+        
+        Args:
+            format (str): Audio format to save as ("mp3" or "wav")
+            
+        Returns:
+            str: Path to the saved temporary file, or None if no audio data
+        """
         if not self.frames and not self.temp_files:
             return None
+        
+        # Default to MP3 unless WAV is specifically requested
+        use_mp3 = format.lower() == "mp3"
+        file_extension = ".mp3" if use_mp3 else ".wav"
         
         # If we have chunks, combine them
         if self.temp_files:
@@ -268,7 +281,7 @@ class AudioManager:
                 self._save_current_chunk()
             
             # Create a combined temporary file
-            fd, combined_path = tempfile.mkstemp(suffix='.wav')
+            fd, combined_path = tempfile.mkstemp(suffix='.wav')  # Always combine as WAV first
             os.close(fd)
             
             # Combine all chunks into one file
@@ -291,13 +304,20 @@ class AudioManager:
             if self.config.get("scrub_silences", True):
                 processed_path = self._remove_silences(combined_path)
                 if processed_path:
+                    combined_path = processed_path
                     self.temp_files.append(processed_path)
-                    return processed_path
+            
+            # Convert to MP3 if requested
+            if use_mp3:
+                mp3_path = self._convert_to_mp3(combined_path)
+                if mp3_path:
+                    self.temp_files.append(mp3_path)
+                    return mp3_path
             
             return combined_path
         else:
             # Create a temporary file
-            fd, temp_path = tempfile.mkstemp(suffix='.wav')
+            fd, temp_path = tempfile.mkstemp(suffix='.wav')  # Always save as WAV first
             os.close(fd)
             
             # Save audio data to the temporary file
@@ -313,10 +333,61 @@ class AudioManager:
             if self.config.get("scrub_silences", True):
                 processed_path = self._remove_silences(temp_path)
                 if processed_path:
+                    temp_path = processed_path
                     self.temp_files.append(processed_path)
-                    return processed_path
+            
+            # Convert to MP3 if requested
+            if use_mp3:
+                mp3_path = self._convert_to_mp3(temp_path)
+                if mp3_path:
+                    self.temp_files.append(mp3_path)
+                    return mp3_path
             
             return temp_path
+    
+    def _convert_to_mp3(self, wav_path, bitrate="128k"):
+        """
+        Convert WAV file to MP3 format
+        
+        Args:
+            wav_path (str): Path to the WAV file
+            bitrate (str): MP3 bitrate (default: "128k")
+            
+        Returns:
+            str: Path to the MP3 file, or None if conversion failed
+        """
+        try:
+            # Create a temporary file for the MP3
+            fd, mp3_path = tempfile.mkstemp(suffix='.mp3')
+            os.close(fd)
+            
+            # Use pydub to convert WAV to MP3
+            try:
+                audio = AudioSegment.from_wav(wav_path)
+                audio.export(mp3_path, format="mp3", bitrate=bitrate)
+                return mp3_path
+            except Exception as e:
+                print(f"Error using pydub to convert to MP3: {e}")
+                # Fall back to ffmpeg if available
+                try:
+                    import ffmpeg
+                    (
+                        ffmpeg
+                        .input(wav_path)
+                        .output(mp3_path, audio_bitrate=bitrate)
+                        .run(quiet=True, overwrite_output=True)
+                    )
+                    return mp3_path
+                except Exception as ffmpeg_error:
+                    print(f"Error using ffmpeg to convert to MP3: {ffmpeg_error}")
+                    return None
+        except Exception as e:
+            print(f"Error converting WAV to MP3: {e}")
+            return None
+    
+    def save_to_wav_file(self):
+        """Save recorded audio to temporary WAV file (for backward compatibility)"""
+        return self.save_to_temp_file(format="wav")
     
     def has_recording(self):
         """Check if there is a recording available"""
