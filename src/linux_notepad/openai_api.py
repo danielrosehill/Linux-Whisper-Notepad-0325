@@ -69,32 +69,37 @@ class OpenAIManager:
         """Load custom prompts from file or use defaults if file doesn't exist"""
         custom_prompts_file = os.path.join(self.config.config_dir, "custom_prompts.json")
         
+        # Start with a copy of the default prompts
+        prompts = self.DEFAULT_TEXT_PROCESSING_MODES.copy()
+        
         if os.path.exists(custom_prompts_file):
             try:
                 with open(custom_prompts_file, 'r') as f:
                     custom_prompts = json.load(f)
                 
-                # Convert legacy format if needed
-                updated_prompts = {}
+                # Convert legacy format if needed and merge with defaults
                 for mode_id, data in custom_prompts.items():
                     if isinstance(data, str):
                         # Convert string to new format
-                        updated_prompts[mode_id] = {
+                        prompts[mode_id] = {
+                            "name": mode_id.replace("_", " ").title(),
                             "prompt": data,
                             "requires_json": mode_id == "extract_todos"  # Default assumption
                         }
                     else:
-                        # Already in new format
-                        updated_prompts[mode_id] = data
+                        # Already in new format, ensure it has a name
+                        if "name" not in data:
+                            data["name"] = mode_id.replace("_", " ").title()
+                        prompts[mode_id] = data
                 
-                return updated_prompts
+                return prompts
             except Exception as e:
                 print(f"Error loading custom prompts: {e}")
-                return self.DEFAULT_TEXT_PROCESSING_MODES.copy()
+                return prompts
         else:
             # If file doesn't exist, create it with default prompts
-            self.save_custom_prompts(self.DEFAULT_TEXT_PROCESSING_MODES)
-            return self.DEFAULT_TEXT_PROCESSING_MODES.copy()
+            self.save_custom_prompts(prompts)
+            return prompts
     
     def save_custom_prompts(self, prompts):
         """Save custom prompts to file"""
@@ -133,6 +138,7 @@ class OpenAIManager:
         
         # Update the prompts dictionary with the new format
         self.TEXT_PROCESSING_MODES[mode_id] = {
+            "name": name,
             "prompt": prompt,
             "requires_json": requires_json
         }
@@ -395,13 +401,16 @@ class OpenAIManager:
             if isinstance(data, str):
                 prompt = data
                 requires_json = mode_id == "extract_todos"  # Default assumption
+                name = mode_id.replace("_", " ").title()  # Default name formatting
             else:
                 prompt = data.get("prompt", "")
                 requires_json = data.get("requires_json", False)
+                # Use the name field if available, otherwise format the mode_id
+                name = data.get("name", mode_id.replace("_", " ").title())
             
             modes.append({
                 "id": mode_id, 
-                "name": mode_id.replace("_", " ").title(), 
+                "name": name,  # Use the name from the JSON file
                 "description": prompt[:100] + "...",
                 "type": "default" if mode_id in self.DEFAULT_TEXT_PROCESSING_MODES else "user",
                 "requires_json": requires_json
