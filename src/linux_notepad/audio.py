@@ -9,7 +9,23 @@ import tempfile
 import numpy as np
 import pyaudio
 from datetime import datetime
-from pydub import AudioSegment
+import sounddevice as sd
+import soundfile as sf
+import subprocess
+
+# Try to import pydub, but provide a fallback if it fails due to missing audioop
+try:
+    from pydub import AudioSegment
+    PYDUB_AVAILABLE = True
+except (ImportError, ModuleNotFoundError):
+    PYDUB_AVAILABLE = False
+    
+# Import ffmpeg for direct MP3 conversion without pydub
+try:
+    import ffmpeg
+    FFMPEG_AVAILABLE = True
+except (ImportError, ModuleNotFoundError):
+    FFMPEG_AVAILABLE = False
 
 class AudioManager:
     """Audio recording and device management"""
@@ -309,7 +325,7 @@ class AudioManager:
             
             # Convert to MP3 if requested
             if use_mp3:
-                mp3_path = self._convert_to_mp3(combined_path)
+                mp3_path = self._convert_to_mp3(combined_path, combined_path.replace('.wav', '.mp3'))
                 if mp3_path:
                     self.temp_files.append(mp3_path)
                     return mp3_path
@@ -338,51 +354,63 @@ class AudioManager:
             
             # Convert to MP3 if requested
             if use_mp3:
-                mp3_path = self._convert_to_mp3(temp_path)
+                mp3_path = self._convert_to_mp3(temp_path, temp_path.replace('.wav', '.mp3'))
                 if mp3_path:
                     self.temp_files.append(mp3_path)
                     return mp3_path
             
             return temp_path
     
-    def _convert_to_mp3(self, wav_path, bitrate="128k"):
+    def _convert_to_mp3(self, wav_file, mp3_file, bitrate="128k"):
         """
         Convert WAV file to MP3 format
         
         Args:
-            wav_path (str): Path to the WAV file
+            wav_file (str): Path to WAV file
+            mp3_file (str): Path to output MP3 file
             bitrate (str): MP3 bitrate (default: "128k")
             
         Returns:
             str: Path to the MP3 file, or None if conversion failed
         """
         try:
-            # Create a temporary file for the MP3
-            fd, mp3_path = tempfile.mkstemp(suffix='.mp3')
-            os.close(fd)
-            
-            # Use pydub to convert WAV to MP3
-            try:
-                audio = AudioSegment.from_wav(wav_path)
-                audio.export(mp3_path, format="mp3", bitrate=bitrate)
-                return mp3_path
-            except Exception as e:
-                print(f"Error using pydub to convert to MP3: {e}")
-                # Fall back to ffmpeg if available
+            # First try using pydub if available
+            if PYDUB_AVAILABLE:
                 try:
-                    import ffmpeg
+                    sound = AudioSegment.from_wav(wav_file)
+                    sound.export(mp3_file, format="mp3", bitrate=bitrate)
+                    return mp3_file
+                except Exception as e:
+                    print(f"Pydub conversion failed: {e}, falling back to ffmpeg")
+            
+            # Fall back to ffmpeg
+            if FFMPEG_AVAILABLE:
+                try:
                     (
                         ffmpeg
-                        .input(wav_path)
-                        .output(mp3_path, audio_bitrate=bitrate)
+                        .input(wav_file)
+                        .output(mp3_file, audio_bitrate=bitrate)
                         .run(quiet=True, overwrite_output=True)
                     )
-                    return mp3_path
-                except Exception as ffmpeg_error:
-                    print(f"Error using ffmpeg to convert to MP3: {ffmpeg_error}")
-                    return None
+                    return mp3_file
+                except Exception as e:
+                    print(f"ffmpeg-python conversion failed: {e}, falling back to subprocess")
+            
+            # Last resort: direct ffmpeg subprocess call
+            try:
+                subprocess.run(
+                    ["ffmpeg", "-i", wav_file, "-b:a", bitrate, mp3_file],
+                    check=True, 
+                    stdout=subprocess.PIPE, 
+                    stderr=subprocess.PIPE
+                )
+                return mp3_file
+            except subprocess.CalledProcessError as e:
+                print(f"ffmpeg subprocess conversion failed: {e}")
+                return None
+                
         except Exception as e:
-            print(f"Error converting WAV to MP3: {e}")
+            print(f"Error converting to MP3: {e}")
             return None
     
     def save_to_wav_file(self):

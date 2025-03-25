@@ -337,6 +337,7 @@ class OpenAIManager:
             
             # Read and process in chunks
             transcriptions = []
+            total_chunks = len(chunk_paths)
             
             for i in range(0, n_frames, chunk_frames):
                 # Read chunk
@@ -645,24 +646,24 @@ class OpenAIManager:
         # Create a combined prompt with all selected modes
         system_prompts = []
         requires_json = False
+        json_mode_id = None
         
         # First, add the basic_cleanup prompt if any non-JSON mode is selected
         # This ensures it's only added once
         basic_cleanup_prompt = self.get_prompt("basic_cleanup")
         basic_cleanup_added = False
         
-        # Check if any mode requires JSON output
+        # Check if any mode requires JSON output and store the first one
         for mode_id in mode_ids:
             if self.requires_json(mode_id):
                 requires_json = True
+                json_mode_id = mode_id
                 break
         
         # If any mode requires JSON, we can't combine them with non-JSON modes
-        if requires_json:
-            # For now, just use the first mode that requires JSON
-            for mode_id in mode_ids:
-                if self.requires_json(mode_id):
-                    return self.process_text(text, mode_id)
+        if requires_json and json_mode_id:
+            # Use the first JSON-requiring mode we found
+            return self.process_text(text, json_mode_id)
         
         # Process each mode and build the combined prompt
         for mode_id in mode_ids:
@@ -682,6 +683,7 @@ class OpenAIManager:
             # If this is the basic_cleanup mode, skip adding it separately
             # as we'll add it at the beginning of the combined prompt
             if mode_id == "basic_cleanup":
+                basic_cleanup_added = True
                 continue
                 
             # Add the prompt to our list
@@ -691,7 +693,7 @@ class OpenAIManager:
         if system_prompts:
             # Add basic_cleanup at the beginning if it's not already in the list
             # or if it is in the list but we haven't added it yet
-            if not basic_cleanup_added:
+            if has_basic_cleanup or not basic_cleanup_added:
                 combined_prompt = basic_cleanup_prompt + " Additionally, " + " Then, ".join(system_prompts)
             else:
                 combined_prompt = " Then, ".join(system_prompts)

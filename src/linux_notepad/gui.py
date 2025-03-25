@@ -1316,14 +1316,20 @@ class MainWindow(QMainWindow):
         
         # Add modes to the list widget
         for mode in modes:
-            # Create a list item
-            item = QListWidgetItem(mode["name"])
+            # Create a list item with JSON label if needed
+            display_name = mode["name"]
+            if mode.get("requires_json", False):
+                display_name = f"{display_name} [JSON]"
+                
+            item = QListWidgetItem(display_name)
             
             # Store the mode info in the item's data
             item.setData(Qt.ItemDataRole.UserRole, mode["id"])
             
             # Set tooltip to show description
             tooltip_text = mode.get("description", mode.get("prompt", "")[:100] + "...").replace("\n", " ")
+            if mode.get("requires_json", False):
+                tooltip_text = "[JSON OUTPUT] " + tooltip_text
             item.setToolTip(tooltip_text)
             
             # Add the item to the list
@@ -2073,6 +2079,14 @@ class MainWindow(QMainWindow):
         basic_cleanup_info.setWordWrap(True)
         layout.addWidget(basic_cleanup_info)
         
+        # Add JSON mode info
+        json_mode_info = QLabel(
+            "Modes marked with [JSON] will output structured data in JSON format and cannot be combined with other modes."
+        )
+        json_mode_info.setStyleSheet("color: #D32F2F; background-color: #FFEBEE; padding: 8px; border-radius: 4px; margin-bottom: 10px;")
+        json_mode_info.setWordWrap(True)
+        layout.addWidget(json_mode_info)
+        
         # Add search box for filtering modes in the dialog
         search_layout = QHBoxLayout()
         search_label = QLabel("Search:")
@@ -2134,6 +2148,10 @@ class MainWindow(QMainWindow):
             # Rename "Basic Cleanup" to "Basic Cleanup Only" in the display
             display_name = "Basic Cleanup Only" if mode["id"] == "basic_cleanup" else mode["name"]
             
+            # Add JSON label if needed
+            if mode.get("requires_json", False):
+                display_name = f"{display_name} [JSON]"
+            
             item = QListWidgetItem(display_name)
             item.setData(Qt.ItemDataRole.UserRole, mode["id"])
             item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
@@ -2148,6 +2166,8 @@ class MainWindow(QMainWindow):
             
             # Set tooltip to show description
             tooltip_text = mode.get("description", mode.get("prompt", "")[:100] + "...").replace("\n", " ")
+            if mode.get("requires_json", False):
+                tooltip_text = "[JSON OUTPUT] " + tooltip_text
             item.setToolTip(tooltip_text)
             
             item.setCheckState(Qt.CheckState.Checked if is_selected else Qt.CheckState.Unchecked)
@@ -2272,6 +2292,10 @@ class MainWindow(QMainWindow):
         
         # Update the selection count
         self.update_mode_selection_count()
+        
+        # Enable the process button if there's transcribed text
+        has_text = bool(self.transcribed_text.toPlainText().strip())
+        self.process_button.setEnabled(has_text and self.mode_list.selectedItems())
         
         # Provide feedback about the changes
         newly_selected = set(modes_to_select)
