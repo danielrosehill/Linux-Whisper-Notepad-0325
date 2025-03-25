@@ -214,7 +214,7 @@ class MainWindow(QMainWindow):
         # ===== LEFT COLUMN =====
         # Record section
         record_header = QLabel("RECORD")
-        record_header.setStyleSheet("font-size: 15px; font-weight: bold; color: #1A1A1A; background-color: #4285F4; padding: 8px 12px; border-radius: 3px; margin-bottom: 5px;")
+        record_header.setStyleSheet("font-size: 15px; font-weight: bold; color: white; background-color: #4285F4; padding: 8px 12px; border-radius: 3px; margin-bottom: 5px;")
         left_column.addWidget(record_header)
         
         # Add shaded container for record section
@@ -225,7 +225,7 @@ class MainWindow(QMainWindow):
         
         # Add description text
         record_description = QLabel("Record audio from your microphone to transcribe into text.")
-        record_description.setStyleSheet("font-style: italic; color: #666; margin-bottom: 6px; font-size: 12px;")
+        record_description.setStyleSheet("font-style: italic; color: #333; margin-bottom: 6px; font-size: 12px;")
         record_description.setWordWrap(True)
         record_description.setFixedHeight(20)  # Set fixed height to prevent overlap
         record_container_layout.addWidget(record_description)
@@ -331,7 +331,7 @@ class MainWindow(QMainWindow):
         
         # Transcribed text section
         transcribe_header = QLabel("TRANSCRIBE")
-        transcribe_header.setStyleSheet("font-size: 15px; font-weight: bold; color: #1A1A1A; background-color: #34A853; padding: 8px 12px; border-radius: 3px; margin-top: 10px;")
+        transcribe_header.setStyleSheet("font-size: 15px; font-weight: bold; color: white; background-color: #34A853; padding: 8px 12px; border-radius: 3px; margin-top: 10px;")
         left_column.addWidget(transcribe_header)
         
         # Add description text in a container with subtle background
@@ -342,7 +342,7 @@ class MainWindow(QMainWindow):
         
         # Add description text
         transcribe_description = QLabel("Text after transcription by Whisper API.")
-        transcribe_description.setStyleSheet("font-style: italic; color: #666; margin-bottom: 6px; font-size: 12px;")
+        transcribe_description.setStyleSheet("font-style: italic; color: #333; margin-bottom: 6px; font-size: 12px;")
         transcribe_description.setWordWrap(True)
         transcribe_description.setFixedHeight(20)  # Set fixed height to prevent overlap
         transcribe_container_layout.addWidget(transcribe_description)
@@ -355,7 +355,7 @@ class MainWindow(QMainWindow):
         
         # Add edit hint for transcribed text
         transcribe_edit_hint = QLabel("You can edit the transcribed text before processing.")
-        transcribe_edit_hint.setStyleSheet("font-style: italic; color: #666; font-size: 12px;")
+        transcribe_edit_hint.setStyleSheet("font-style: italic; color: #333; font-size: 12px;")
         left_column.addWidget(transcribe_edit_hint)
         
         # Add clear and copy buttons for transcribed text
@@ -387,11 +387,13 @@ class MainWindow(QMainWindow):
         self.transcribe_button.clicked.connect(self.transcribe_audio)
         self.transcribe_button.setEnabled(False)
         self.transcribe_button.setToolTip("Transcribe Audio (Ctrl+T)")
+        self.transcribe_button.setStyleSheet("background-color: #0D47A1; color: white; font-weight: bold; padding: 8px 15px; font-size: 14px;")
         transcribe_buttons_layout.addWidget(self.transcribe_button)
         
         self.transcribe_process_button = QPushButton("Transcribe and Process")
         self.transcribe_process_button.clicked.connect(self.transcribe_and_process)
         self.transcribe_process_button.setEnabled(False)
+        self.transcribe_process_button.setStyleSheet("background-color: #0D47A1; color: white; font-weight: bold; padding: 8px 15px; font-size: 14px;")
         transcribe_buttons_layout.addWidget(self.transcribe_process_button)
         
         left_column.addLayout(transcribe_buttons_layout)
@@ -399,12 +401,12 @@ class MainWindow(QMainWindow):
         # ===== RIGHT COLUMN =====
         # Process section
         process_header = QLabel("PROCESS")
-        process_header.setStyleSheet("font-size: 15px; font-weight: bold; color: #1A1A1A; background-color: #FBBC05; padding: 8px 12px; border-radius: 3px;")
+        process_header.setStyleSheet("font-size: 15px; font-weight: bold; color: white; background-color: #2196F3; padding: 8px 12px; border-radius: 3px;")
         right_column.addWidget(process_header)
         
         # Add shaded container for process section
         process_container = QWidget()
-        process_container.setStyleSheet("background-color: #FEF9E7; border: 1px solid #FCF3CF; border-radius: 5px; padding: 10px;")
+        process_container.setStyleSheet("background-color: #E3F2FD; border: 1px solid #B2EBF2; border-radius: 5px; padding: 10px;")
         process_container_layout = QVBoxLayout(process_container)
         process_container_layout.setContentsMargins(10, 10, 10, 10)
         
@@ -412,7 +414,7 @@ class MainWindow(QMainWindow):
         process_description = QLabel(
             "Choose formatting instructions to improve and process the dictated text. The basic cleanup mode is selected by default."
         )
-        process_description.setStyleSheet("font-style: italic; color: #666; margin-bottom: 6px; font-size: 12px;")
+        process_description.setStyleSheet("font-style: italic; color: #333; margin-bottom: 6px; font-size: 12px;")
         process_description.setWordWrap(True)
         process_description.setFixedHeight(40)  # Set fixed height to prevent overlap
         process_container_layout.addWidget(process_description)
@@ -426,7 +428,7 @@ class MainWindow(QMainWindow):
         
         # Add selection count indicator
         self.selection_count_label = QLabel("1 mode selected: Basic Cleanup Only")
-        self.selection_count_label.setStyleSheet("font-weight: bold; color: #1565C0;")
+        self.selection_count_label.setStyleSheet("font-weight: bold; color: #0D47A1;")
         mode_info_layout.addWidget(self.selection_count_label)
         
         mode_info_layout.addStretch()
@@ -451,6 +453,7 @@ class MainWindow(QMainWindow):
         # Process button
         process_button_layout = QHBoxLayout()
         self.process_button = QPushButton("Process")
+        self.process_button.setStyleSheet("background-color: #0D47A1; color: white; font-weight: bold; padding: 8px 15px; font-size: 14px;")
         self.process_button.clicked.connect(self.process_text)
         self.process_button.setEnabled(False)
         self.process_button.setToolTip("Process Text (Ctrl+P)")
@@ -469,7 +472,7 @@ class MainWindow(QMainWindow):
         
         # Add edit hint for processed text
         processed_edit_hint = QLabel("You can edit the processed text before saving.")
-        processed_edit_hint.setStyleSheet("font-style: italic; color: #666; font-size: 12px;")
+        processed_edit_hint.setStyleSheet("font-style: italic; color: #333; font-size: 12px;")
         right_column.addWidget(processed_edit_hint)
         
         # Add clear and copy buttons for processed text
@@ -496,18 +499,18 @@ class MainWindow(QMainWindow):
         
         # Save section
         save_header = QLabel("SAVE")
-        save_header.setStyleSheet("font-size: 15px; font-weight: bold; color: #1A1A1A; background-color: #EA4335; padding: 8px 12px; border-radius: 3px; margin-top: 10px;")
+        save_header.setStyleSheet("font-size: 15px; font-weight: bold; color: white; background-color: #FF9800; padding: 8px 12px; border-radius: 3px; margin-top: 10px;")
         right_column.addWidget(save_header)
         
         # Add shaded container for save section
         save_container = QWidget()
-        save_container.setStyleSheet("background-color: #FDEDEC; border: 1px solid #F5B7B1; border-radius: 5px; padding: 10px;")
+        save_container.setStyleSheet("background-color: #F7F7F7; border: 1px solid #F2F2F2; border-radius: 5px; padding: 10px;")
         save_container_layout = QVBoxLayout(save_container)
         save_container_layout.setContentsMargins(10, 10, 10, 10)
         
         # Add description text
         save_description = QLabel("Save your processed text to a file.")
-        save_description.setStyleSheet("font-style: italic; color: #666; margin-bottom: 6px; font-size: 12px;")
+        save_description.setStyleSheet("font-style: italic; color: #333; margin-bottom: 6px; font-size: 12px;")
         save_description.setWordWrap(True)
         save_container_layout.addWidget(save_description)
         
@@ -530,6 +533,7 @@ class MainWindow(QMainWindow):
         self.save_button.clicked.connect(self.save_text)
         self.save_button.setEnabled(False)
         self.save_button.setToolTip("Save Text (Ctrl+W)")
+        self.save_button.setStyleSheet("background-color: #0D47A1; color: white; font-weight: bold; padding: 8px 15px; font-size: 14px;")
         save_button_layout.addWidget(self.save_button)
         save_button_layout.addStretch()
         save_container_layout.addLayout(save_button_layout)
@@ -646,6 +650,23 @@ class MainWindow(QMainWindow):
         # Prompts list
         prompts_group = QGroupBox("Available Prompts")
         prompts_layout = QVBoxLayout(prompts_group)
+        
+        # Add search box for filtering prompts
+        search_layout = QHBoxLayout()
+        search_label = QLabel("Search:")
+        search_layout.addWidget(search_label)
+        
+        self.prompts_search_box = QLineEdit()
+        self.prompts_search_box.setPlaceholderText("Search prompts by name or description...")
+        self.prompts_search_box.textChanged.connect(self.filter_system_prompts)
+        search_layout.addWidget(self.prompts_search_box)
+        
+        # Add clear button for search
+        clear_search_button = QPushButton("Clear")
+        clear_search_button.clicked.connect(self.clear_prompts_search)
+        search_layout.addWidget(clear_search_button)
+        
+        prompts_layout.addLayout(search_layout)
         
         # Add prompts count label
         self.prompts_count_label = QLabel()
@@ -1525,6 +1546,7 @@ class MainWindow(QMainWindow):
             # Show error message
             error_message = result.get("error", "Unknown error")
             QMessageBox.warning(self, "Transcription Error", f"Failed to transcribe audio: {error_message}")
+            self.statusBar().showMessage("Error transcribing audio")
     
     def process_text(self):
         """Process the transcribed text using the selected mode(s)"""
@@ -2217,3 +2239,42 @@ class MainWindow(QMainWindow):
         # Save shortcut (Ctrl+W) - using W to avoid conflict with Ctrl+S for stop
         self.save_shortcut = QShortcut(QKeySequence("Ctrl+W"), self)
         self.save_shortcut.activated.connect(self.save_text)
+    
+    def filter_system_prompts(self, text):
+        """Filter system prompts based on search text"""
+        search_text = text.lower()
+        
+        # Get all available modes
+        modes = self.openai_manager.get_available_modes()
+        
+        # Count how many items are visible
+        visible_count = 0
+        
+        for i in range(self.prompts_list.count()):
+            item = self.prompts_list.item(i)
+            mode_id = item.data(Qt.ItemDataRole.UserRole)
+            
+            # Find the corresponding mode data
+            mode_data = next((m for m in modes if m["id"] == mode_id), None)
+            
+            if mode_data:
+                # Check if search text is in name or description
+                name = mode_data.get('name', '').lower()
+                description = mode_data.get('description', '').lower()
+                
+                if search_text in name or search_text in description:
+                    item.setHidden(False)
+                    visible_count += 1
+                else:
+                    item.setHidden(True)
+        
+        # Update the count label to show filtered results
+        if text:
+            self.prompts_count_label.setText(f"{visible_count} of {len(modes)} system prompts shown")
+        else:
+            self.prompts_count_label.setText(f"{len(modes)} system prompts available")
+    
+    def clear_prompts_search(self):
+        """Clear the prompts search box and show all prompts"""
+        self.prompts_search_box.clear()
+        # This will trigger the textChanged signal and call filter_system_prompts

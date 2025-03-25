@@ -2,67 +2,80 @@
     "basic_cleanup": {
         "name": "Basic Cleanup",
         "prompt": "Take the following transcript and refine it to add missing punctuation, resolve typos, add paragraph spacing, and generally enhance the presentation of the text while preserving the original meaning.",
-        "requires_json": false
+        "requires_json": false,
+        "description": "Transforms text using basic cleanup style or format"
     },
     "extract_todos": {
-        "name": "Extract To-Dos",
+        "name": "Extract To-dos",
         "prompt": "Extract only the to-do items from the following dictated text. Format them as a markdown list with checkboxes. For example: '- [ ] Task description'.",
-        "requires_json": true
+        "requires_json": true,
+        "description": "Extract only the to-do items from the following dictated text"
     },
     "shakespearean": {
         "name": "Shakespearean",
         "prompt": "Take the following dictated text and return it in Shakespearean English, maintaining the original meaning but using the style, vocabulary, and sentence structure typical of Shakespeare's works.",
-        "requires_json": false
+        "requires_json": false,
+        "description": "Transforms text using shakespearean style or format"
     },
     "meeting_minutes": {
         "name": "Meeting Minutes",
         "prompt": "Format the following transcript as professional meeting minutes. Identify key discussion points, decisions made, and action items. Use appropriate headings and structure.",
-        "requires_json": false
+        "requires_json": false,
+        "description": "Format the following transcript as professional meeting minutes"
     },
     "bullet_summary": {
         "name": "Bullet Summary",
         "prompt": "Summarize the following transcript as concise bullet points, capturing the main ideas and important details.",
-        "requires_json": false
+        "requires_json": false,
+        "description": "Transforms text using bullet summary style or format"
     },
     "technical_documentation": {
         "name": "Technical Documentation",
         "prompt": "Convert the following dictated text into technical documentation format. Use appropriate headings, code blocks for any technical elements, and clear explanations.",
-        "requires_json": false
+        "requires_json": false,
+        "description": "Convert the following dictated text into technical documentation format"
     },
     "email_draft": {
         "name": "Email Draft",
         "prompt": "Convert the following dictated text into a professional email format. Add an appropriate subject line, greeting, body paragraphs, and closing. Maintain a professional tone throughout.",
-        "requires_json": false
+        "requires_json": false,
+        "description": "Convert the following dictated text into a professional email format"
     },
     "personalized_email": {
         "name": "Personalized Email",
         "prompt": "Convert the following dictated text into a professional email format from {user_name}. Add an appropriate subject line, greeting, body paragraphs, and include this signature at the end: {email_signature}. Maintain a professional tone throughout.",
-        "requires_json": false
+        "requires_json": false,
+        "description": "Convert the following dictated text into a professional email format from {user_name}"
     },
     "blog_post": {
         "name": "Blog Post",
         "prompt": "Format the following dictated text as a blog post. Add an engaging title, organize content into sections with headings, and improve readability with proper paragraph structure.",
-        "requires_json": false
+        "requires_json": false,
+        "description": "Format the following dictated text as a blog post"
     },
     "academic_paper": {
         "name": "Academic Paper",
         "prompt": "Format the following dictated text in an academic style. Organize content into sections (Introduction, Methods, Results, Discussion, etc.), use formal language, and suggest where citations might be needed.",
-        "requires_json": false
+        "requires_json": false,
+        "description": "Format the following dictated text in an academic style"
     },
     "social_media_post": {
         "name": "Social Media Post",
         "prompt": "Convert the following dictated text into a social media post. Make it concise, engaging, and add appropriate hashtags. Format it to be shareable on platforms like Twitter, LinkedIn, or Instagram.",
-        "requires_json": false
+        "requires_json": false,
+        "description": "Convert the following dictated text into a social media post"
     },
     "code_documentation": {
         "name": "Code Documentation",
         "prompt": "Convert the following dictated text into code documentation. Format it with appropriate markdown, code blocks, parameter descriptions, and examples where applicable.",
-        "requires_json": false
+        "requires_json": false,
+        "description": "Convert the following dictated text into code documentation"
     },
     "poetry": {
         "name": "Poetry",
         "prompt": "Transform the following dictated text into a poem. Maintain the core meaning but add rhythm, structure, and poetic elements.",
-        "requires_json": false
+        "requires_json": false,
+        "description": "Transform the following dictated text into a poem"
     },
     "anonymization": {
         "name": "Anonymization",
@@ -101,7 +114,7 @@
         "description": "Embellishes text with relevant proverbs, sayings, and idioms"
     },
     "de_jargonize": {
-        "name": "De-Jargonize",
+        "name": "De-jargonize",
         "prompt": "Simplify the following dictated text by removing technical jargon, specialized terminology, and complex language. Replace these elements with plain, accessible language that anyone can understand while preserving the core meaning.",
         "requires_json": false,
         "description": "Removes technical jargon and simplifies complex terminology"
@@ -245,7 +258,7 @@
         "description": "Filters text to ensure professional business tone and removes personal information"
     },
     "friends_and_family": {
-        "name": "Friends and Family",
+        "name": "Friends And Family",
         "prompt": "Rewrite the following text in a warm, casual tone appropriate for friends and family. Remove excessive formality, add conversational elements, and make the language more relaxed and personal while maintaining the original meaning.",
         "requires_json": false,
         "description": "Makes text more casual and personal for informal communication"
@@ -269,7 +282,7 @@
         "description": "Removes both greetings and sign-offs for direct communication"
     },
     "linkedin_post": {
-        "name": "LinkedIn Post",
+        "name": "Linkedin Post",
         "prompt": "Reformat the following text as a professional LinkedIn post. Use appropriate paragraph breaks, add relevant hashtags, maintain a professional yet engaging tone, and optimize for visibility on the LinkedIn platform. Keep it concise and impactful.",
         "requires_json": false,
         "description": "Formats text specifically for LinkedIn platform posting"
@@ -317,7 +330,7 @@
         "description": "Adds subtle Shakespearean elements while keeping text mostly modern"
     },
     "to_do_lists": {
-        "name": "To-Do Lists",
+        "name": "To-do Lists",
         "prompt": "Transform the following text into a clear, actionable to-do list. Break down larger tasks into smaller, manageable steps. Use a format that is easy to read and follow, with checkboxes for marking completed tasks.",
         "requires_json": false,
         "description": "Converts text into a structured to-do list format"
@@ -389,13 +402,13 @@
         "description": "Transforms text to sound like it's from a visionary thought leader providing high-level insights"
     },
     "bluf": {
-        "name": "BLUF (Bottom Line Up Front)",
+        "name": "Bluf (bottom Line Up Front)",
         "prompt": "Reformat the following text using the Bottom Line Up Front (BLUF) format commonly used in military and government communications. Add a clear, concise BLUF header at the beginning that summarizes the key point, action required, or decision needed. Use appropriate military-style keywords (INFO, ACTION, DECISION, etc.) to denote the type of communication. Maintain the original content after the BLUF section.",
         "requires_json": false,
         "description": "Adds a Bottom Line Up Front (BLUF) header element used in military communications"
     },
     "tldr": {
-        "name": "TL;DR Summary",
+        "name": "Tl;dr Summary",
         "prompt": "Add a 'TL;DR' (Too Long; Didn't Read) section to the beginning of the following text. The TL;DR should be approximately 2-3 sentences that concisely summarize the main points or key takeaways from the full text. Format it clearly as a separate section before the main content.",
         "requires_json": false,
         "description": "Adds a brief TL;DR summary section to the beginning of the text"
@@ -498,9 +511,9 @@
     },
     "platitudes_lover": {
         "name": "Platitudes Lover",
-        "prompt": "Transform the following text by generously incorporating common platitudes, clichés, and inspirational sayings throughout. Add phrases like 'every cloud has a silver lining,' 'when one door closes, another opens,' 'the early bird catches the worm,' and similar well-worn expressions. The result should maintain the original meaning while being stuffed with these familiar, comforting phrases.",
+        "prompt": "Transform the following text by generously incorporating common platitudes, clich\u00e9s, and inspirational sayings throughout. Add phrases like 'every cloud has a silver lining,' 'when one door closes, another opens,' 'the early bird catches the worm,' and similar well-worn expressions. The result should maintain the original meaning while being stuffed with these familiar, comforting phrases.",
         "requires_json": false,
-        "description": "Fills text with common platitudes, clichés, and inspirational sayings"
+        "description": "Fills text with common platitudes, clich\u00e9s, and inspirational sayings"
     },
     "wikileaks_cable": {
         "name": "Wikileaks Diplomatic Cable",
@@ -683,7 +696,7 @@
         "description": "Structures text as interview responses using the STAR method with clear examples"
     },
     "linkedin_profile_summary": {
-        "name": "LinkedIn Profile Summary",
+        "name": "Linkedin Profile Summary",
         "prompt": "Convert the following text into a compelling LinkedIn profile summary. Begin with a strong professional identity statement, highlight core expertise and unique value proposition, incorporate industry keywords for searchability, balance professional achievements with personality, include a clear call to action, and maintain a first-person perspective. The result should be engaging, concise (under 2000 characters), and optimized for both human readers and LinkedIn's algorithm.",
         "requires_json": false,
         "description": "Transforms text into an optimized LinkedIn profile summary with professional branding"
@@ -713,19 +726,19 @@
         "description": "Generates a structured timesheet from dictated time tracking information"
     },
     "structured_chatgpt_prompt": {
-        "name": "Structured ChatGPT Prompt",
+        "name": "Structured Chatgpt Prompt",
         "prompt": "Transform the following dictated text into a well-structured ChatGPT prompt. Format it with clear sections for context, specific instructions, constraints or limitations, expected format for the response, and any examples if needed. Use appropriate formatting with headings, bullet points, and paragraph breaks to maximize clarity and effectiveness.",
         "requires_json": false,
         "description": "Creates a well-structured prompt optimized for ChatGPT and similar language models"
     },
     "chain_of_thought_prompt": {
-        "name": "Chain-of-Thought Prompt",
+        "name": "Chain-of-thought Prompt",
         "prompt": "Reformat the following dictated text into a prompt that explicitly requests step-by-step reasoning. Structure it to encourage the AI to break down the problem into logical steps, show its work, explain its thinking process, and arrive at a conclusion gradually. Include phrases like 'think step by step' or 'let's work through this systematically' to encourage detailed reasoning.",
         "requires_json": false,
         "description": "Creates prompts that encourage AI models to show detailed step-by-step reasoning"
     },
     "few_shot_prompt": {
-        "name": "Few-Shot Learning Prompt",
+        "name": "Few-shot Learning Prompt",
         "prompt": "Convert the following dictated text into a few-shot learning prompt. Structure it with a clear task description followed by 2-3 examples of the desired input-output pattern. Format each example consistently with clear delineation between input and output. Ensure the examples demonstrate the pattern you want the AI to follow, then add your actual query following the same format as the examples.",
         "requires_json": false,
         "description": "Creates prompts with examples to guide AI in producing responses in a specific format or style"
@@ -743,7 +756,7 @@
         "description": "Creates prompts optimized for requesting code solutions or technical explanations from AI"
     },
     "role_based_prompt": {
-        "name": "Role-Based Prompt",
+        "name": "Role-based Prompt",
         "prompt": "Convert the following dictated text into a prompt that assigns a specific expert role to the AI. Begin with 'You are an expert in [field]' or similar phrasing, followed by specific instructions that leverage that expertise. Include relevant context, clear questions or requests, and specify the desired format or depth of response expected from that expert perspective.",
         "requires_json": false,
         "description": "Creates prompts that assign specific expert roles to the AI to leverage specialized knowledge"
@@ -761,19 +774,19 @@
         "description": "Creates prompts optimized for requesting data analysis and insights from AI tools"
     },
     "persona_based_prompt": {
-        "name": "Persona-Based Prompt",
+        "name": "Persona-based Prompt",
         "prompt": "Transform the following dictated text into a prompt that establishes a specific persona for the AI to adopt. Define the persona's characteristics, expertise, communication style, and perspective in detail. Then formulate the actual request or question that should be answered from this persona's viewpoint. The result should elicit responses that consistently maintain the defined persona throughout.",
         "requires_json": false,
         "description": "Creates prompts that establish a consistent persona for the AI to maintain in its responses"
     },
     "constraint_based_prompt": {
-        "name": "Constraint-Based Prompt",
+        "name": "Constraint-based Prompt",
         "prompt": "Reformat the following dictated text into a prompt with clear constraints and limitations. Explicitly define what the AI should NOT do or include, specify word or length limits, establish format restrictions, and set boundaries on the scope of the response. Structure these constraints prominently to ensure they guide the AI's response effectively.",
         "requires_json": false,
         "description": "Creates prompts with explicit constraints to control and focus AI responses"
     },
     "multi_turn_prompt": {
-        "name": "Multi-Turn Conversation Prompt",
+        "name": "Multi-turn Conversation Prompt",
         "prompt": "Convert the following dictated text into a prompt designed for an extended multi-turn conversation with an AI. Structure it to establish context that should persist across multiple exchanges, define long-term goals for the conversation, include initial questions or instructions, and specify how the AI should maintain continuity and build upon previous responses in subsequent turns.",
         "requires_json": false,
         "description": "Creates prompts optimized for extended conversations with context retention across multiple turns"
@@ -791,7 +804,7 @@
         "description": "Creates prompts that encourage critical examination of multiple perspectives and potential weaknesses"
     },
     "format_enforcing_prompt": {
-        "name": "Format-Enforcing Prompt",
+        "name": "Format-enforcing Prompt",
         "prompt": "Convert the following dictated text into a prompt with strict output format requirements. Specify exactly how the response should be structured, including required sections, headers, formatting elements, and data organization. Use examples of the desired format where helpful, and explicitly state that adherence to the specified format is essential.",
         "requires_json": false,
         "description": "Creates prompts that enforce specific output formats and structures in AI responses"
@@ -803,13 +816,13 @@
         "description": "Creates prompts designed for multi-step refinement processes with feedback loops"
     },
     "zero_shot_cot_prompt": {
-        "name": "Zero-Shot Chain of Thought",
+        "name": "Zero-shot Chain Of Thought",
         "prompt": "Reformat the following dictated text into a zero-shot chain of thought prompt. Structure it to pose a complex question or problem, then explicitly instruct the AI to 'think step by step' before providing its final answer, without providing specific examples. The prompt should encourage the AI to break down its reasoning process naturally without being shown how to do so.",
         "requires_json": false,
         "description": "Creates prompts that encourage step-by-step reasoning without providing examples"
     },
     "scenario_based_prompt": {
-        "name": "Scenario-Based Prompt",
+        "name": "Scenario-based Prompt",
         "prompt": "Convert the following dictated text into a prompt that establishes a detailed hypothetical scenario. Describe the situation, relevant context, key actors, and specific conditions that apply. Then formulate questions or requests that should be addressed within the constraints of this scenario. The result should elicit responses that remain consistent with the established scenario.",
         "requires_json": false,
         "description": "Creates prompts based on hypothetical scenarios to explore specific situations or conditions"
@@ -833,7 +846,7 @@
         "description": "Creates prompts that focus on ethical dimensions and considerations of a topic"
     },
     "readme_format": {
-        "name": "README Format",
+        "name": "Readme Format",
         "prompt": "Format the following dictated text as a GitHub README.md file. Include appropriate sections such as introduction, installation instructions, usage examples, features, contributing guidelines, and license information where applicable. Use proper markdown formatting with headings, code blocks, lists, and emphasis where appropriate.",
         "requires_json": false,
         "description": "Formats text in the style of a GitHub repository README file with proper markdown sections"
@@ -851,19 +864,19 @@
         "description": "Formats text as a numbered list of clear, sequential instructions"
     },
     "howto_guide": {
-        "name": "How-To Guide",
+        "name": "How-to Guide",
         "prompt": "Transform the following dictated text into a comprehensive how-to guide. Include an introduction explaining the purpose and outcome, a materials/prerequisites section, step-by-step instructions with clear headings, troubleshooting tips, and a conclusion. Use a friendly, instructional tone throughout.",
         "requires_json": false,
         "description": "Formats text as a detailed how-to guide with sections for materials, steps, and troubleshooting"
     },
     "oped_format": {
-        "name": "Op-Ed Format",
+        "name": "Op-ed Format",
         "prompt": "Reformat the following dictated text as an opinion editorial (op-ed). Include a compelling headline, a strong opening paragraph that states the main argument, supporting paragraphs with evidence and reasoning, counterarguments with rebuttals, and a persuasive conclusion. Use a confident, authoritative tone while maintaining a respectful approach to opposing viewpoints.",
         "requires_json": false,
         "description": "Formats text as an opinion editorial with persuasive arguments and a clear position"
     },
     "letter_to_editor": {
-        "name": "Letter to Editor",
+        "name": "Letter To Editor",
         "prompt": "Format the following dictated text as a letter to the editor of a publication. Include a concise headline, a formal salutation, a brief introduction referencing the article or issue being addressed, a clear statement of your position, supporting points, and a conclusion with a call to action if appropriate. Keep the tone respectful yet persuasive.",
         "requires_json": false,
         "description": "Formats text as a letter to the editor with proper structure and persuasive elements"
@@ -872,7 +885,7 @@
         "name": "Log Format",
         "prompt": "Format the following dictated text as a chronological log entry. Begin with the timestamp provided by the user, followed by structured, concise entries that document events, observations, or data points. Use consistent formatting for each entry, separate entries clearly, and maintain an objective, factual tone throughout.",
         "requires_json": false,
-        "description": "Formats text as a timestamped log entry with consistent structure for recording information"
+        "description": "Formats text as a timestamped log entry with consistent structure and objective tone"
     },
     "bug_report_format": {
         "name": "Bug Report Format",
@@ -923,31 +936,31 @@
         "description": "Formats text as a standard note with clear organization and structure"
     },
     "whatsapp_message_format": {
-        "name": "WhatsApp Message Format",
+        "name": "Whatsapp Message Format",
         "prompt": "Convert the following dictated text into a concise WhatsApp message. Make it as brief as possible by removing unnecessary words, using common abbreviations, eliminating formalities, and focusing only on essential information. The result should be conversational, direct, and suitable for instant messaging.",
         "requires_json": false,
         "description": "Formats text as a brief WhatsApp message, optimized for instant messaging"
     },
     "sms_message_format": {
-        "name": "SMS Message Format",
+        "name": "Sms Message Format",
         "prompt": "Convert the following dictated text into an SMS message, strictly limiting it to 160 characters maximum (the standard SMS character limit). Prioritize essential information, use abbreviations where appropriate, remove all unnecessary words, and ensure the core message is preserved despite the severe length constraint.",
         "requires_json": false,
         "description": "Formats text as an SMS message with strict 160-character limit"
     },
     "word_character_count_constraint": {
-        "name": "Word/Character Count Constraint",
+        "name": "Word/character Count Constraint",
         "prompt": "Rewrite the following text to fit within the specified word or character limit while preserving the most important information. If a specific count is mentioned in the text (e.g., '100 words'), use that as the maximum. Prioritize key points, remove redundancies, and ensure the result remains coherent and complete despite the constraints.",
         "requires_json": false,
         "description": "Enforces specified word or character count limits while preserving essential content"
     },
     "out_of_office_responder": {
-        "name": "Out-of-Office Responder",
+        "name": "Out-of-office Responder",
         "prompt": "Format the following dictated text as a professional out-of-office email auto-response. Include a clear statement of absence, specific absence dates, reason for unavailability (if provided), alternative contact information for urgent matters, expected response timeframe upon return, and an appropriate sign-off. Maintain a professional but friendly tone and ensure all essential information is presented concisely.",
         "requires_json": false,
         "description": "Formats text as an out-of-office automatic email response with absence details and alternative contacts"
     },
     "auto_reply": {
-        "name": "Auto-Reply Message",
+        "name": "Auto-reply Message",
         "prompt": "Format the following dictated text as an automatic reply message. Create a concise, informative response that acknowledges receipt of communication, sets clear expectations for follow-up or processing time, provides any necessary next steps or alternative actions, and maintains a professional tone. The message should be formatted appropriately for automated responses across email or messaging platforms.",
         "requires_json": false,
         "description": "Formats text as an automatic reply message with clear expectations and next steps"
@@ -971,7 +984,7 @@
         "description": "Formats text as a persuasive marketing email with compelling value proposition and clear call-to-action"
     },
     "ai_system_prompt": {
-        "name": "AI System Prompt",
+        "name": "Ai System Prompt",
         "prompt": "Format the following dictated text as a system prompt for configuring an AI assistant. Structure it with a clear definition of the assistant's role, specific instructions on how the assistant should behave, knowledge domains it should draw from, tone and style guidelines, constraints or limitations, and format expectations for responses. Begin with 'You are a [role]' and use direct, imperative language throughout. The result should follow standard conventions for AI system prompts that effectively guide an assistant's behavior.",
         "requires_json": false,
         "description": "Formats text as a system prompt for configuring AI assistants with clear role definition and behavioral instructions"
@@ -981,5 +994,641 @@
         "prompt": "Extract only the specific context data from the following text that would be useful for setting context in an AI system. Identify the user by name and reformat the content in third person. Convert first-person references to third-person statements. Present the information as a streamlined, condensed series of factual statements without commentary. Focus only on relevant context data such as preferences, background information, technical details, and specific requirements.",
         "requires_json": false,
         "description": "Extracts and reformats context data in third person for use in AI system context windows"
+    },
+    "software_generation_prompt": {
+        "name": "Software Generation Prompt",
+        "prompt": "Convert the following dictated text into a clear prompt for generating software. Structure it with sections for context, requirements, constraints, and expected deliverables. Specify the programming language, frameworks, design patterns, and any specific implementation details. Include acceptance criteria and performance expectations where applicable.",
+        "requires_json": false,
+        "description": "Reformats text as a structured prompt for AI-based software generation with clear requirements"
+    },
+    "code_editing_prompt": {
+        "name": "Code Editing Prompt",
+        "prompt": "Transform the following dictated text into a precise prompt for editing existing code. Include sections for the current code structure, specific changes needed, rationale for changes, and any constraints to consider. Specify file paths, function names, or classes that need modification, and describe the expected behavior after the changes.",
+        "requires_json": false,
+        "description": "Reformats text as a prompt for AI tools to make specific edits to an existing codebase"
+    },
+    "debugging_prompt": {
+        "name": "Debugging Prompt",
+        "prompt": "Convert the following dictated text into a structured debugging prompt. Include sections for the observed issue, expected behavior, error messages or logs, environment details, steps to reproduce, and any troubleshooting already attempted. Format code snippets and error messages for readability.",
+        "requires_json": false,
+        "description": "Reformats text as a prompt for AI-assisted debugging of code issues with comprehensive context"
+    },
+    "feature_addition_prompt": {
+        "name": "Feature Addition Prompt",
+        "prompt": "Transform the following dictated text into a prompt for adding new features to existing code. Include sections for the current codebase structure, detailed feature requirements, integration points with existing code, expected behavior, and any performance or compatibility considerations. Specify how the new feature should interact with existing functionality.",
+        "requires_json": false,
+        "description": "Reformats text as a prompt for AI tools to implement new features in an existing codebase"
+    },
+    "css_edit_prompt": {
+        "name": "Css Edit Prompt",
+        "prompt": "Convert the following dictated text into a prompt for CSS modifications. Include sections for the current styling, specific changes needed, responsive design requirements, browser compatibility considerations, and any design system constraints. Reference specific selectors, properties, and values where possible.",
+        "requires_json": false,
+        "description": "Reformats text as a prompt for AI-assisted CSS styling modifications with specific design requirements"
+    },
+    "ui_ux_edit_prompt": {
+        "name": "Ui/ux Edit Prompt",
+        "prompt": "Transform the following dictated text into a prompt for UI/UX improvements. Include sections for the current interface design, user experience issues to address, proposed changes, accessibility requirements, and success metrics. Reference specific components, interactions, and user flows that need enhancement.",
+        "requires_json": false,
+        "description": "Reformats text as a prompt for AI-assisted UI/UX improvements with focus on user experience and accessibility"
+    },
+    "domain_name": {
+        "name": "Domain Name Registration",
+        "prompt": "Translate the following technical writing into a concise, user-friendly format suitable for registering a domain name. Provide essential details such as domain extension, registrar information, and contact data.",
+        "requires_json": false,
+        "description": "Transforms text using domain name registration style or format"
+    },
+    "poetic_summarization": {
+        "name": "Poetic Summary",
+        "prompt": "Rewrite the following scientific article in poetic form, focusing on key concepts, findings, and implications. Use metaphors, similes, and other literary devices to convey complex ideas.",
+        "requires_json": false,
+        "description": "Transforms text using poetic summary style or format"
+    },
+    "conversational_scripting": {
+        "name": "Conversational Scripting",
+        "prompt": "Generate a conversational dialogue for a customer service script based on the following product specifications. Ensure the tone is friendly, informative, and empathetic.",
+        "requires_json": false,
+        "description": "Transforms text using conversational scripting style or format"
+    },
+    "journalese_transformation": {
+        "name": "Journalistic Transformation",
+        "prompt": "Convert the following technical writing into journalistic style, incorporating elements of news writing such as headlines, ledes, and quote sources. Maintain a neutral tone.",
+        "requires_json": false,
+        "description": "Transforms text using journalistic transformation style or format"
+    },
+    "infotainment_storytelling": {
+        "name": "Infotainment Storytelling",
+        "prompt": "Create an engaging infotainment story around the following data analysis results. Use storytelling techniques to make complex statistics and findings accessible to a wider audience.",
+        "requires_json": true,
+        "description": "Transforms text using infotainment storytelling style or format"
+    },
+    "dystopian_future": {
+        "name": "Dystopian Future",
+        "prompt": "Transform the given text into a futuristic, dystopian narrative. Replace everyday objects with sci-fi equivalents and rephrase sentences to convey a sense of hopelessness and rebellion.",
+        "requires_json": false,
+        "description": "Generate a rewritten text in a dark, futuristic setting."
+    },
+    "fairy_tale_reimagining": {
+        "name": "Fairy Tale Reimagining",
+        "prompt": "Retell the classic fairy tale 'Goldilocks and the Three Bears' from the perspective of the bears. Use an objective tone to reveal their thoughts, feelings, and motivations.",
+        "requires_json": false,
+        "description": "Transform a traditional fairy tale into a character-driven narrative."
+    },
+    "journal_entry_analysis": {
+        "name": "Journal Entry Analysis",
+        "prompt": "Analyze the given journal entry and extract key emotions, themes, and events. Format the results as a concise, chronological summary.",
+        "requires_json": true,
+        "description": "Extract insight from a personal journal entry."
+    },
+    "mystical_mythology": {
+        "name": "Mystical Mythology",
+        "prompt": "Transform the given text into a mystical, mythological narrative. Use archaic language and symbolism to convey ancient wisdom.",
+        "requires_json": false,
+        "description": "Generate a rewritten text in a mystical, mythological style."
+    },
+    "scientific_report_summary": {
+        "name": "Scientific Report Summary",
+        "prompt": "Summarize the given scientific report into concise bullet points. Focus on key findings, methodology, and conclusions.",
+        "requires_json": true,
+        "description": "Condense a scientific report into essential information."
+    },
+    "germanize_terms": {
+        "name": "Germanize Technical Terms",
+        "prompt": "Translate the given technical terms into German while maintaining their original meaning. Replace abbreviations with full English words, and ensure all formatting is consistent with German conventions.",
+        "requires_json": false,
+        "description": "Transforms text using germanize technical terms style or format"
+    },
+    "generate_acronyms": {
+        "name": "Generate Acronyms From Descriptions",
+        "prompt": "Create a list of acronyms based on the given descriptions. Each acronym should be derived from its description, and all acronyms must be in alphabetical order.",
+        "requires_json": true,
+        "description": "Transforms text using generate acronyms from descriptions style or format"
+    },
+    "create_personas": {
+        "name": "Create Personas For Target Audience",
+        "prompt": "Develop two to three personas based on the provided demographics and psychographics. Each persona should have a unique name, age range, occupation, interests, and goals.",
+        "requires_json": false,
+        "description": "Transforms text using create personas for target audience style or format"
+    },
+    "summarize_academic_papers": {
+        "name": "Summarize Academic Papers In Journalistic Style",
+        "prompt": "Condense the given academic paper into a concise summary for a general audience. Ensure all technical terms are explained, and the tone is objective.",
+        "requires_json": true,
+        "description": "Transforms text using summarize academic papers in journalistic style style or format"
+    },
+    "generate_slang_definitions": {
+        "name": "Generate Slang Definitions From Context",
+        "prompt": "Create definitions for slang terms found within the given text. Each definition should be concise, informative, and include an example sentence.",
+        "requires_json": false,
+        "description": "Transforms text using generate slang definitions from context style or format"
+    },
+    "generate_poetry": {
+        "name": "Generate Poetry",
+        "prompt": "Transform the given prose into a poetic piece, using the original's tone and style but rephrasing it to fit a lyrical format. Emphasize rhythm and meter.",
+        "requires_json": false,
+        "description": "Transforms text using generate poetry style or format"
+    },
+    "convert_to_code": {
+        "name": "Convert To Code",
+        "prompt": "Translate the given technical text into a programming code snippet, targeting Python as the primary language. Ensure proper indentation, syntax, and comments.",
+        "requires_json": true,
+        "description": "Transforms text using convert to code style or format"
+    },
+    "rewrite_news_article": {
+        "name": "Rewrite News Article",
+        "prompt": "Take the provided news article and rephrase it from a journalistic perspective to a more persuasive and engaging tone, focusing on emotional storytelling.",
+        "requires_json": false,
+        "description": "Transforms text using rewrite news article style or format"
+    },
+    "create_conversationDialogue": {
+        "name": "Create Conversation Dialogue",
+        "prompt": "Develop a natural-sounding conversation between two characters, incorporating their distinct personalities, backgrounds, and motivations. Ensure coherent dialogue flow and context.",
+        "requires_json": true,
+        "description": "Transforms text using create conversation dialogue style or format"
+    },
+    "generate_memo": {
+        "name": "Generate Memo",
+        "prompt": "Format the given text as a formal memo to an executive or team leader, including a clear subject line, concise summary, and action items. Use proper business tone and structure.",
+        "requires_json": false,
+        "description": "Transforms text using generate memo style or format"
+    },
+    "dystopian_news_article": {
+        "name": "Dystopian News Article",
+        "prompt": "Transform the given news article into a dystopian-themed narrative, incorporating elements of science fiction and social commentary. Use descriptive language to create an immersive atmosphere.",
+        "requires_json": false,
+        "description": "Transforms text using dystopian news article style or format"
+    },
+    "old_book_report": {
+        "name": "Old Book Report",
+        "prompt": "Rewrite the following book report in the style of a classic literary critic from the early 20th century. Incorporate historical references and use formal, academic language to analyze the novel's themes and characters.",
+        "requires_json": false,
+        "description": "Transforms text using old book report style or format"
+    },
+    "scientific_abstract": {
+        "name": "Scientific Abstract",
+        "prompt": "Condense the following scientific text into a concise abstract, highlighting the main research question, methodology, results, and conclusions. Use technical vocabulary and adhere to standard scientific formatting conventions.",
+        "requires_json": true,
+        "description": "Transforms text using scientific abstract style or format"
+    },
+    "poetic_biography": {
+        "name": "Poetic Biography",
+        "prompt": "Transform the given biography into a poetic tribute, using verse and metaphor to capture the subject's essence and life story. Emphasize key moments and themes that define their character.",
+        "requires_json": false,
+        "description": "Transforms text using poetic biography style or format"
+    },
+    "product_review_summary": {
+        "name": "Product Review Summary",
+        "prompt": "Summarize the following product review as a concise, neutral summary. Extract the main pros and cons, and format them in a clear and easy-to-read table or list.",
+        "requires_json": true,
+        "description": "Transforms text using product review summary style or format"
+    },
+    "persianize_text": {
+        "name": "Persianize Text",
+        "prompt": "Take the following text and convert it into Modern Persian (Farsi). Replace English words with their Persian equivalents, adjust sentence structure to conform to Farsi grammar rules, and ensure proper use of diacritical marks.",
+        "requires_json": false,
+        "description": "Transforms text using persianize text style or format"
+    },
+    "scientific_paper_summary": {
+        "name": "Scientific Paper Summary",
+        "prompt": "Condense the following scientific paper into a concise summary paragraph. Preserve key findings, research methods, and conclusions, but omit unnecessary details. Use technical vocabulary relevant to the field.",
+        "requires_json": false,
+        "description": "Transforms text using scientific paper summary style or format"
+    },
+    "convert_to_old_style_english": {
+        "name": "Convert To Old Style English",
+        "prompt": "Transform the following text into Early Modern English (circa 1500-1700). Update vocabulary, adjust sentence structure to conform to early modern grammar rules, and incorporate stylistic features characteristic of this era.",
+        "requires_json": false,
+        "description": "Transforms text using convert to old style english style or format"
+    },
+    "google_review_transcript": {
+        "name": "Google Review Transcript",
+        "prompt": "Format the following review transcript as a Google review. Include rating, brief summary of the experience, and specific details about what made the reviewer happy or unhappy with their visit.",
+        "requires_json": false,
+        "description": "Transforms text using google review transcript style or format"
+    },
+    "create_academic_abstract": {
+        "name": "Create Academic Abstract",
+        "prompt": "Write an abstract for the following research paper. Condense the main findings into a concise paragraph (150-200 words), using technical vocabulary and formatting guidelines typical of academic journals.",
+        "requires_json": false,
+        "description": "Transforms text using create academic abstract style or format"
+    },
+    "satz_transformation": {
+        "name": "Satz Transformation",
+        "prompt": "Take the following prose and break it down into its constituent sentence structures. Rearrange these sentences to create new, cohesive narratives while maintaining a consistent tone and style.",
+        "requires_json": false,
+        "description": "Transforms text using satz transformation style or format"
+    },
+    "emoji_code_translation": {
+        "name": "Emoji Code Translation",
+        "prompt": "Given an emoji code (e.g., ':smile:') or its English representation (e.g. 'smiling face'), translate it into its corresponding visual representation and provide the output in both formats.",
+        "requires_json": false,
+        "description": "Transforms text using emoji code translation style or format"
+    },
+    "film Dialogue Cleanup": {
+        "name": "Film Dialogue Cleanup",
+        "prompt": "Clean up film dialogue to remove unnecessary words, clarify ambiguous expressions, and improve overall clarity while maintaining the original intent and tone of the script. Ensure consistent formatting throughout.",
+        "requires_json": false,
+        "description": "Transforms text using film dialogue cleanup style or format"
+    },
+    "news_article_summary": {
+        "name": "News Article Summary",
+        "prompt": "Condense a news article into a concise summary highlighting key points, dates, and figures. Use proper grammar and style to make the summary readable by non-experts.",
+        "requires_json": true,
+        "description": "Transforms text using news article summary style or format"
+    },
+    "danish_translator": {
+        "name": "Danish Translator",
+        "prompt": "Translate the following English text into Danish, taking care to preserve cultural nuances and colloquialisms. Use formal language suitable for official documents.",
+        "requires_json": false,
+        "description": "Transforms text using danish translator style or format"
+    },
+    "cultural_summarizer": {
+        "name": "Cultural Summarizer",
+        "prompt": "Summarize a piece of writing in 2-3 sentences that capture its cultural context and significance, highlighting key themes or motifs.",
+        "requires_json": false,
+        "description": "Transforms text using cultural summarizer style or format"
+    },
+    "dialogue_paraphraser": {
+        "name": "Dialogue Paraphraser",
+        "prompt": "Paraphrase the following dialogue to preserve the speaker's intent and emotional tone while rephrasing it in more formal language. Use a neutral tone.",
+        "requires_json": true,
+        "description": "Transforms text using dialogue paraphraser style or format"
+    },
+    "literary_analysis": {
+        "name": "Literary Analysis",
+        "prompt": "Analyze a piece of writing from a literary perspective, identifying symbolism, motifs, and themes. Provide evidence to support your claims and offer insights into the author's intentions.",
+        "requires_json": false,
+        "description": "Transforms text using literary analysis style or format"
+    },
+    "technical_report_generator": {
+        "name": "Technical Report Generator",
+        "prompt": "Format the following technical report as a standard document in the field of engineering or science. Include sections for introduction, methodology, results, and conclusions, using proper formatting and terminology.",
+        "requires_json": false,
+        "description": "Transforms text using technical report generator style or format"
+    },
+    "germanize_names": {
+        "name": "Germanize Names",
+        "prompt": "Take the following list of names and replace all non-Germanic first names with their German equivalents. Also, ensure that the last name is in the standard German format (e.g., surname followed by a comma and then the person's title). Use Wikipedia as a reference for translations.",
+        "requires_json": false,
+        "description": "Transforms text using germanize names style or format"
+    },
+    "extract_email_threads": {
+        "name": "Extract Email Threads",
+        "prompt": "Extract all email conversations from the following text, grouping them into separate threads. Identify the sender, recipient, and main topic of each thread. Use Markdown formatting to represent the conversation flow.",
+        "requires_json": true,
+        "description": "Transforms text using extract email threads style or format"
+    },
+    "convert_acronyms": {
+        "name": "Convert Acronyms",
+        "prompt": "Replace all acronyms in the following text with their expanded forms (e.g., 'NASA' becomes 'National Aeronautics and Space Administration'). Ensure accuracy by using a reliable source as a reference.",
+        "requires_json": false,
+        "description": "Transforms text using convert acronyms style or format"
+    },
+    "translate_to_journalistic_style": {
+        "name": "Translate To Journalistic Style",
+        "prompt": "Transform the following text into a journalistic tone, focusing on clarity, concision, and engaging storytelling. Use active voice and varied sentence structures to capture the reader's attention.",
+        "requires_json": false,
+        "description": "Transforms text using translate to journalistic style style or format"
+    },
+    "format_informal_dialogue": {
+        "name": "Format Informal Dialogue",
+        "prompt": "Take the following conversation and reformat it into a formal, polished discussion suitable for publication or professional presentation. Use proper grammar, punctuation, and formatting to enhance clarity.",
+        "requires_json": false,
+        "description": "Transforms text using format informal dialogue style or format"
+    },
+    "inverted_text": {
+        "name": "Inverted Text",
+        "prompt": "Take the following text and invert its meaning. Replace 'true' with 'false', 'yes' with 'no', and vice versa, while maintaining the original syntax and sentence structure.",
+        "requires_json": false,
+        "description": "Transforms text by flipping boolean values"
+    },
+    "cultural_translation": {
+        "name": "Cultural Translation",
+        "prompt": "Translate the following text from one cultural context to another. For example, translate idioms, colloquial expressions, and cultural references that may not have direct equivalents.",
+        "requires_json": true,
+        "description": "Adapts text for different cultural contexts"
+    },
+    "dialogue_tagging": {
+        "name": "Dialogue Tagging",
+        "prompt": "Identify and label dialogue tags in the following transcript, such as 'said', 'asked', 'said again', or other phrases used to indicate speaker change.",
+        "requires_json": true,
+        "description": "Extracts and labels dialogue tags"
+    },
+    "sentimental_tone": {
+        "name": "Sentimental Tone",
+        "prompt": "Detect the sentimental tone of the following text, such as emotional appeals, persuasive language, or objective explanations.",
+        "requires_json": true,
+        "description": "Analyzes sentiment in text"
+    },
+    "paraphrase_summary": {
+        "name": "Paraphrase Summary",
+        "prompt": "Paraphrase the main ideas of the following transcript into a concise summary that captures the essence of the original text.",
+        "requires_json": true,
+        "description": "Rewrites text as paraphrased summary"
+    },
+    "interviewTranscript": {
+        "name": "Interview Transcript",
+        "prompt": "Format the provided transcript into a polished, interview-style Q&A. Include question headers, speaker identification, and concise answers in bullet points or numbered list format.",
+        "requires_json": true,
+        "description": "Transforms text using interview transcript style or format"
+    },
+    "creativeDialogue": {
+        "name": "Creative Dialogue",
+        "prompt": "Create an engaging conversation between two characters with distinct personalities, cultures, or professions. Use dialectical expressions, colloquialisms, and idioms to create a richly nuanced dialogue.",
+        "requires_json": false,
+        "description": "Transforms text using creative dialogue style or format"
+    },
+    "archaicDictionaryEntry": {
+        "name": "Archaic Dictionary Entry",
+        "prompt": "Rewrite the provided text in the style of an archaic dictionary entry from a bygone era. Use antiquated vocabulary, jargon, and terminology to convey complex information in a dusty, academic tone.",
+        "requires_json": false,
+        "description": "Transforms text using archaic dictionary entry style or format"
+    },
+    "latinize_names": {
+        "name": "Latinize Names",
+        "prompt": "Take the following names and return them in Latinized form, using proper declension and accentuation. For example: 'John' becomes 'Iohannes'.",
+        "requires_json": false,
+        "description": "Transforms text using latinize names style or format"
+    },
+    "convert_american_to_british_date_format": {
+        "name": "Convert American To British Date Format",
+        "prompt": "Take the following date string in American format (MM/DD/YYYY) and return it in British format (DD/MM/YYYY).",
+        "requires_json": true,
+        "description": "Transforms text using convert american to british date format style or format"
+    },
+    "create_copyright_notice": {
+        "name": "Create Copyright Notice",
+        "prompt": "Generate a standard copyright notice, including year of publication and your name as author. Format according to CC BY-SA license.",
+        "requires_json": false,
+        "description": "Transforms text using create copyright notice style or format"
+    },
+    "translate_to_hipster_slang": {
+        "name": "Translate To Hipster Slang",
+        "prompt": "Take the following text and return it rewritten in hipster slang, using trendy vocabulary and phrases (e.g. 'totally stoked', 'on fleek').",
+        "requires_json": false,
+        "description": "Transforms text using translate to hipster slang style or format"
+    },
+    "create_personality_based_summary": {
+        "name": "Create Personality-based Summary",
+        "prompt": "Summarize the following text in a style that reflects the author's personality, tone and language. For example: a formal summary for a business report or an informal summary for a blog post.",
+        "requires_json": false,
+        "description": "Transforms text using create personality-based summary style or format"
+    },
+    "generate_conversational Dialogue": {
+        "name": "Conversational Dialogue Generator",
+        "prompt": "Create a piece of conversational dialogue between two characters with distinct personalities, backgrounds, and motivations. Ensure the conversation flows naturally and reveals character traits. Provide context for the scenario and ensure it's clear who speaks when.",
+        "requires_json": false,
+        "description": "Transforms text using conversational dialogue generator style or format"
+    },
+    "convert_to_poetic_lyrics": {
+        "name": "Poetic Song Lyrics",
+        "prompt": "Transform the following prose into poetic song lyrics, maintaining the original message but using a lyrical structure, rhyme scheme, and poetic language typical of popular songs. Emphasize emotional expression and storytelling.",
+        "requires_json": false,
+        "description": "Transforms text using poetic song lyrics style or format"
+    },
+    "translate_toAncient_Greek": {
+        "name": "Ancient Greek Translator",
+        "prompt": "Translate the given text into Ancient Greek, paying attention to idiosyncrasies in grammar, syntax, and vocabulary. Ensure readability while preserving the original meaning.",
+        "requires_json": false,
+        "description": "Transforms text using ancient greek translator style or format"
+    },
+    "format_as_ancient_ scroll": {
+        "name": "Ancient Scroll Document",
+        "prompt": "Format the given text as an ancient scroll document, including formal language, elaborate introductions, and classical formatting. Use authentic-looking parchment layout where possible.",
+        "requires_json": false,
+        "description": "Transforms text using ancient scroll document style or format"
+    },
+    "generate_technical_specifications": {
+        "name": "Technical Specifications Generator",
+        "prompt": "Create detailed technical specifications for a product or system based on the provided text. Ensure clarity in description, precise measurements, and consistent formatting.",
+        "requires_json": true,
+        "description": "Transforms text using technical specifications generator style or format"
+    },
+    "generate_sarcastic_text": {
+        "name": "Generate Sarcastic Text",
+        "prompt": "Take the following input and return it as if written in a sarcastic tone. Use phrases like 'obviously', 'duh', and 'of course' to convey attitude.",
+        "requires_json": false,
+        "description": "Transforms text using generate sarcastic text style or format"
+    },
+    "convert_to_poetry": {
+        "name": "Convert To Poetry",
+        "prompt": "Transform the following prose into a poem, maintaining the original meaning but using rhyming couplets and a consistent meter.",
+        "requires_json": false,
+        "description": "Transforms text using convert to poetry style or format"
+    },
+    "summarize_as_a_child": {
+        "name": "Summarize As A Child",
+        "prompt": "Explain the following text in a way that a child would understand. Use simple vocabulary and short sentences.",
+        "requires_json": false,
+        "description": "Transforms text using summarize as a child style or format"
+    },
+    "create_acronyms": {
+        "name": "Create Acronyms",
+        "prompt": "Take the following sentence or phrase and create an acronym from it, where each word becomes the first letter of a new word.",
+        "requires_json": true,
+        "description": "Transforms text using create acronyms style or format"
+    },
+    "rewrite_from_a_differsent_perspective": {
+        "name": "Rewrite From A Different Perspective",
+        "prompt": "Transform the following text to be written from the point of view and with the voice of someone who strongly disagrees with the original author's opinions.",
+        "requires_json": true,
+        "description": "Transforms text using rewrite from a different perspective style or format"
+    },
+    "create_poetry": {
+        "name": "Create Poetry",
+        "prompt": "Take the following paragraph and transform it into a poetic piece, using metaphors, similes, and other literary devices to convey emotions and ideas. Try to maintain a consistent rhythm and meter.",
+        "requires_json": false,
+        "description": "Transforms text using create poetry style or format"
+    },
+    "technical_writing_style": {
+        "name": "Technical Writing Style",
+        "prompt": "Format the following text according to technical writing standards, including proper headings, subheadings, bullet points, and numbered lists. Ensure clarity and concision in the presentation of complex information.",
+        "requires_json": false,
+        "description": "Transforms text using technical writing style style or format"
+    },
+    "summarize_conversation": {
+        "name": "Summarize Conversation",
+        "prompt": "Extract the key points from a conversation and condense them into a brief summary, focusing on main ideas, agreements, and disagreements. Use proper grammar and punctuation.",
+        "requires_json": false,
+        "description": "Transforms text using summarize conversation style or format"
+    },
+    "translate_to_indirect_speech": {
+        "name": "Translate To Indirect Speech",
+        "prompt": "Transform the following direct speech into indirect speech, using verb forms such as 'it is said' or 'he replied'. Maintain the original meaning and tone.",
+        "requires_json": false,
+        "description": "Transforms text using translate to indirect speech style or format"
+    },
+    "generate_dialogue_tags": {
+        "name": "Generate Dialogue Tags",
+        "prompt": "Add dialogue tags to the following transcript, using proper punctuation and capitalization. Ensure that action beats and character names are included.",
+        "requires_json": true,
+        "description": "Transforms text using generate dialogue tags style or format"
+    },
+    "dystopian_rewriting": {
+        "name": "Dystopian Rewriting",
+        "prompt": "Transform the following text into a dystopian sci-fi narrative. Replace descriptive words with dark, ominous terms and rephrase sentences to create a sense of foreboding and unease.",
+        "requires_json": false,
+        "description": "Transforms text using dystopian rewriting style or format"
+    },
+    "emoji_encryption": {
+        "name": "Emoji Encryption",
+        "prompt": "Encrypt the following message using emojis. Each word should be represented by a unique emoji. Use punctuation marks as needed to separate words.",
+        "requires_json": true,
+        "description": "Transforms text using emoji encryption style or format"
+    },
+    "chinese_character_transcription": {
+        "name": "Chinese Character Transcription",
+        "prompt": "Transcribe the following Chinese characters into Romanized English. Ensure accuracy and attention to detail.",
+        "requires_json": false,
+        "description": "Transforms text using chinese character transcription style or format"
+    },
+    "historical_date_code": {
+        "name": "Historical Date Code",
+        "prompt": "Transform the following text to include a historical date code based on the year of publication. Use a standardized format (e.g., ISO 8601) and replace all other dates with 'Unknown' if necessary.",
+        "requires_json": false,
+        "description": "Transforms text using historical date code style or format"
+    },
+    "abnormal_word_replacement": {
+        "name": "Abnormal Word Replacement",
+        "prompt": "Replace common words in the following text with their less common or slang alternatives. Focus on words that change meaning significantly when replaced (e.g., 'normal' -> 'average', 'big' -> 'enormous').",
+        "requires_json": true,
+        "description": "Transforms text using abnormal word replacement style or format"
+    },
+    "convert_to_axiom": {
+        "name": "Convert To Axiom",
+        "prompt": "Translate the given text into a formal axiom, using logical operators and standard mathematical notation. Ensure the resulting statement is precise and unambiguous.",
+        "requires_json": false,
+        "description": "Transforms text using convert to axiom style or format"
+    },
+    "generate_chapter_abstracts": {
+        "name": "Generate Chapter Abstracts",
+        "prompt": "Extract key sentences from a series of academic papers and rephrase them as concise chapter abstracts, highlighting main research questions and findings.",
+        "requires_json": true,
+        "description": "Transforms text using generate chapter abstracts style or format"
+    },
+    "create_informal_dialogue": {
+        "name": "Create Informal Dialogue",
+        "prompt": "Transform the given formal text into an informal dialogue between two people, using contractions, colloquialisms, and natural speech patterns.",
+        "requires_json": false,
+        "description": "Transforms text using create informal dialogue style or format"
+    },
+    "translate_to_indonesian_idiolect": {
+        "name": "Translate To Indonesian Idiolect",
+        "prompt": "Adapt the given text into a unique dialect of the Indonesian language, incorporating local expressions, idioms, and cultural nuances.",
+        "requires_json": false,
+        "description": "Transforms text using translate to indonesian idiolect style or format"
+    },
+    "rewrite_as_newsheadline": {
+        "name": "Rewrite As News Headline",
+        "prompt": "Transform the given text into a compelling news headline that captures the essence of the original message, using attention-grabbing words and phrases.",
+        "requires_json": false,
+        "description": "Transforms text using rewrite as news headline style or format"
+    },
+    "generate_paraphrase": {
+        "name": "Generate Paraphrase",
+        "prompt": "Take the following article and generate a rewritten version with similar meaning but distinct wording. Aim for a 10% increase in readability while maintaining the original content's core ideas.",
+        "requires_json": false,
+        "description": "Transforms text using generate paraphrase style or format"
+    },
+    "standardize_acronyms": {
+        "name": "Standardize Acronyms",
+        "prompt": "Replace all instances of acronyms and abbreviations with their full expansions, ensuring consistency throughout the text. Use reliable sources to verify correct spellings and pronunciations.",
+        "requires_json": true,
+        "description": "Transforms text using standardize acronyms style or format"
+    },
+    "convert_to_prose": {
+        "name": "Convert To Prose",
+        "prompt": "Transform the following technical specification into a detailed prose description, focusing on the underlying principles and concepts rather than specific implementation details.",
+        "requires_json": false,
+        "description": "Transforms text using convert to prose style or format"
+    },
+    "create_summary_outro": {
+        "name": "Create Summary Outro",
+        "prompt": "Write a summary section for the given text, capturing its main points and providing a concise overview. Ensure the tone is informative and engaging, suitable for an audience interested in the topic.",
+        "requires_json": false,
+        "description": "Transforms text using create summary outro style or format"
+    },
+    "generate_conversational_tone": {
+        "name": "Generate Conversational Tone",
+        "prompt": "Rewrite the following formal document to adopt a conversational tone, making it more approachable and friendly while maintaining its original substance. Use everyday language and avoid jargon whenever possible.",
+        "requires_json": false,
+        "description": "Transforms text using generate conversational tone style or format"
+    },
+    "german_to_french": {
+        "name": "German To French Translation",
+        "prompt": "Translate the following text from German to French, maintaining the original meaning and idioms. Use formal language and consider regional variations.",
+        "requires_json": false,
+        "description": "Transforms text using german to french translation style or format"
+    },
+    "code_commenting": {
+        "name": "Code Commenting",
+        "prompt": "Add descriptive comments to the provided code snippet in a style consistent with popular programming languages (e.g., Java, Python). Focus on explaining complex logic, functions, and variables.",
+        "requires_json": true,
+        "description": "Transforms text using code commenting style or format"
+    },
+    "formal_email_reply": {
+        "name": "Formal Email Reply",
+        "prompt": "Format the following email as a formal reply. Use proper salutations, maintain the original tone, and include a clear response to the main points discussed.",
+        "requires_json": false,
+        "description": "Transforms text using formal email reply style or format"
+    },
+    "data_description": {
+        "name": "Data Description",
+        "prompt": "Write a comprehensive description of the provided data set, including statistics, visualizations, and notable insights. Assume a general audience familiar with data concepts.",
+        "requires_json": true,
+        "description": "Transforms text using data description style or format"
+    },
+    "literary_work_summary": {
+        "name": "Literary Work Summary",
+        "prompt": "Condense the following literary work into a concise summary. Focus on key plot points, character arcs, and themes, using proper literary terminology.",
+        "requires_json": false,
+        "description": "Transforms text using literary work summary style or format"
+    },
+    "poetry_compression": {
+        "name": "Poetry Compression",
+        "prompt": "Take the following poetic text and compress it into a concise version, preserving the original meaning but reducing words to their essential components. Use techniques like alliteration, assonance, and consonance to enhance the musicality of the poem.",
+        "requires_json": false,
+        "description": "Transforms text using poetry compression style or format"
+    },
+    "press_release_conversion": {
+        "name": "Press Release Conversion",
+        "prompt": "Convert the following formal news article into a press release format, including a catchy headline, concise summary, and boilerplate paragraph. Ensure the tone remains professional and attention-grabbing.",
+        "requires_json": false,
+        "description": "Transforms text using press release conversion style or format"
+    },
+    "dialogue_analysis": {
+        "name": "Dialogue Analysis",
+        "prompt": "Analyze the dialogue in the following script to identify key conversations, speaker motivations, and relationships between characters. Provide a breakdown of each scene and suggest ways to improve character development.",
+        "requires_json": true,
+        "description": "Transforms text using dialogue analysis style or format"
+    },
+    "technical_report_abstraction": {
+        "name": "Technical Report Abstraction",
+        "prompt": "Summarize the following technical report in a concise abstract, highlighting key findings, methodology, results, and conclusions. Use technical terms accurately and avoid jargon to ensure accessibility.",
+        "requires_json": true,
+        "description": "Transforms text using technical report abstraction style or format"
+    },
+    "song_lyrics_translation": {
+        "name": "Song Lyrics Translation",
+        "prompt": "Translate the following song lyrics into another language, taking care to preserve the original meaning, tone, and poetic devices used. Consider cultural nuances and idiomatic expressions that may not translate directly.",
+        "requires_json": true,
+        "description": "Transforms text using song lyrics translation style or format"
+    },
+    "convert_to_rhyme": {
+        "name": "Convert To Rhyme",
+        "prompt": "Take the following prose and convert it into a rhyming poem, maintaining the original meaning and tone. Use as much of the original text as possible while adapting it to fit the rhyme scheme.",
+        "requires_json": false,
+        "description": "Transforms text using convert to rhyme style or format"
+    },
+    "edit_for_fundraising": {
+        "name": "Edit For Fundraising",
+        "prompt": "Take the following content and rewrite it to be more appealing to donors, focusing on emotional storytelling and clear calls-to-action. Use persuasive language and rhetorical devices to motivate readers to support a cause.",
+        "requires_json": false,
+        "description": "Transforms text using edit for fundraising style or format"
+    },
+    "generate_casus_versus_glossa": {
+        "name": "Casus Versus Glossa",
+        "prompt": "Translate the following Latin text into Modern English, using the style of Casus Versus Glossa (also known as 'Latin-English' translation). This involves literal translations of individual words and phrases while taking care to preserve the nuances of meaning.",
+        "requires_json": false,
+        "description": "Transforms text using casus versus glossa style or format"
     }
 }

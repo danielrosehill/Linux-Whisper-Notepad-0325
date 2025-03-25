@@ -1,8 +1,7 @@
-# Linux Whisper Notepad
- 
- ![alt text](screenshots/v1/1.png)
-
 # AI Speech To Text Notepad For Linux (OpenAI Whisper API)
+ 
+ ![alt text](screenshots/v2/1.png)
+
 
 This repository contains a Python-based speech-to-text/dictation capturing utility specifically designed for Linux systems. 
 
