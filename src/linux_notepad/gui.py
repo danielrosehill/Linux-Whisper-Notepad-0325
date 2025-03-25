@@ -133,11 +133,11 @@ class MainWindow(QMainWindow):
         main_layout.addLayout(clear_all_layout)
         
         # Add prominent recording time display at the top
-        self.time_display = QLabel("00:00")
-        self.time_display.setStyleSheet("background-color: #1565C0; color: white; font-weight: bold; font-size: 24px; padding: 5px 15px; border-radius: 5px;")
-        self.time_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.time_display.setFixedWidth(120)
-        main_layout.addWidget(self.time_display, 0, Qt.AlignmentFlag.AlignCenter)
+        self.main_time_display = QLabel("00:00")
+        self.main_time_display.setStyleSheet("background-color: #1565C0; color: white; font-weight: bold; font-size: 24px; padding: 5px 15px; border-radius: 5px;")
+        self.main_time_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.main_time_display.setFixedWidth(120)
+        main_layout.addWidget(self.main_time_display, 0, Qt.AlignmentFlag.AlignCenter)
         
         # Create tab widget for main functionality and settings
         self.tab_widget = QTabWidget()
@@ -1197,7 +1197,7 @@ class MainWindow(QMainWindow):
                 
                 # Reset recording time and start timer
                 self.recording_time = 0
-                self.time_display.setText("00:00")
+                self.main_time_display.setText("00:00")
                 self.recording_timer.start(1000)
             else:
                 QMessageBox.warning(self, "Error", "Failed to start recording. Please check your microphone.")
@@ -1258,7 +1258,7 @@ class MainWindow(QMainWindow):
         self.recording_time += 1
         minutes = self.recording_time // 60
         seconds = self.recording_time % 60
-        self.time_display.setText(f"{minutes:02d}:{seconds:02d}")
+        self.main_time_display.setText(f"{minutes:02d}:{seconds:02d}")
     
     def transcribe_audio(self):
         """Transcribe the recorded audio"""
@@ -1613,7 +1613,7 @@ class MainWindow(QMainWindow):
                 
                 # Reset recording time
                 self.recording_time = 0
-                self.time_display.setText("00:00")
+                self.main_time_display.setText("00:00")
                 
                 # Reset UI
                 self.transcribe_button.setEnabled(False)
