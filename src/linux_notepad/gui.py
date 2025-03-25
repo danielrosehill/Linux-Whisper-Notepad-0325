@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Linux Whisper Notepad - GUI Module
+# Speech Note Capture - GUI Module
 # Implements the PyQt6-based graphical user interface
 
 import os
@@ -17,7 +17,7 @@ from PyQt6.QtCore import (
     Qt, QSize, QThread, pyqtSignal, QObject, 
     QRunnable, pyqtSlot, QThreadPool, QTimer
 )
-from PyQt6.QtGui import QIcon, QFont, QClipboard
+from PyQt6.QtGui import QIcon, QFont, QClipboard, QShortcut, QKeySequence
 from datetime import datetime
 
 from .config import Config
@@ -110,10 +110,13 @@ class MainWindow(QMainWindow):
         
         # Load configuration
         self.load_config()
+        
+        # Setup keyboard shortcuts
+        self.setup_shortcuts()
     
     def init_ui(self):
         """Initialize the user interface"""
-        self.setWindowTitle("Linux Whisper Notepad")
+        self.setWindowTitle("Speech Note Capture")
         self.setMinimumSize(1100, 850)  # Further increased minimum size to prevent layout issues
         
         # Create central widget and main layout
@@ -211,15 +214,21 @@ class MainWindow(QMainWindow):
         # ===== LEFT COLUMN =====
         # Record section
         record_header = QLabel("RECORD")
-        record_header.setStyleSheet("font-size: 15px; font-weight: bold; color: white; background-color: rgba(33, 150, 243, 0.9); padding: 8px 12px; border-radius: 3px; margin-bottom: 5px;")
+        record_header.setStyleSheet("font-size: 15px; font-weight: bold; color: #1A1A1A; background-color: #4285F4; padding: 8px 12px; border-radius: 3px; margin-bottom: 5px;")
         left_column.addWidget(record_header)
+        
+        # Add shaded container for record section
+        record_container = QWidget()
+        record_container.setStyleSheet("background-color: #F8F9FA; border: 1px solid #E1E2E3; border-radius: 5px; padding: 10px;")
+        record_container_layout = QVBoxLayout(record_container)
+        record_container_layout.setContentsMargins(10, 10, 10, 10)
         
         # Add description text
         record_description = QLabel("Record audio from your microphone to transcribe into text.")
         record_description.setStyleSheet("font-style: italic; color: #666; margin-bottom: 6px; font-size: 12px;")
         record_description.setWordWrap(True)
         record_description.setFixedHeight(20)  # Set fixed height to prevent overlap
-        left_column.addWidget(record_description)
+        record_container_layout.addWidget(record_description)
         
         # Audio device selection
         device_layout = QHBoxLayout()
@@ -233,20 +242,22 @@ class MainWindow(QMainWindow):
         # Add buttons in a horizontal layout
         device_buttons_layout = QHBoxLayout()
         
-        # Refresh button
-        refresh_button = QPushButton("Refresh")
+        # Refresh button with icon instead of text
+        refresh_button = QPushButton()
+        refresh_button.setIcon(QIcon.fromTheme("view-refresh"))
+        refresh_button.setToolTip("Refresh Audio Devices")
         refresh_button.clicked.connect(self.refresh_audio_devices)
         device_buttons_layout.addWidget(refresh_button)
         
-        # Set as default button
-        set_default_button = QPushButton("Set as Default")
+        # Set as default button renamed to Make Default
+        set_default_button = QPushButton("Make Default")
         set_default_button.setToolTip("Set the current audio device as the default")
         set_default_button.clicked.connect(self.set_default_audio_device)
         device_buttons_layout.addWidget(set_default_button)
         
         device_layout.addLayout(device_buttons_layout)
         
-        left_column.addLayout(device_layout)
+        record_container_layout.addLayout(device_layout)
         
         # Recording controls
         controls_layout = QHBoxLayout()
@@ -254,18 +265,18 @@ class MainWindow(QMainWindow):
         # Start recording button
         self.record_button = QPushButton()
         self.record_button.setIcon(QIcon.fromTheme("media-record", QIcon.fromTheme("media-playback-start")))
-        self.record_button.setToolTip("Start Recording")
+        self.record_button.setToolTip("Start Recording (Ctrl+R)")
         self.record_button.clicked.connect(self.start_recording)
-        self.record_button.setStyleSheet("background-color: #e53935; color: white;")  # Red color for record button
+        self.record_button.setStyleSheet("background-color: #fb8c00; color: white;")  # Orange color for record button
         controls_layout.addWidget(self.record_button)
         
-        # Stop recording button
+        # Stop recording button - changed background color to match other audio controls
         self.stop_button = QPushButton()
         self.stop_button.setIcon(QIcon.fromTheme("media-playback-stop"))
-        self.stop_button.setToolTip("Stop Recording")
+        self.stop_button.setToolTip("Stop Recording (Ctrl+S)")
         self.stop_button.clicked.connect(self.stop_recording)
         self.stop_button.setEnabled(False)
-        self.stop_button.setStyleSheet("background-color: #424242; color: white;")  # Dark gray color for stop button
+        self.stop_button.setStyleSheet("background-color: #fb8c00; color: white;")  # Changed to orange to match pause button
         controls_layout.addWidget(self.stop_button)
         
         # Pause recording button
@@ -283,10 +294,10 @@ class MainWindow(QMainWindow):
         self.clear_button.setToolTip("Clear Recording")
         self.clear_button.clicked.connect(self.clear_recording)
         self.clear_button.setEnabled(False)
-        self.clear_button.setStyleSheet("background-color: #0288d1; color: white;")  # Blue color for clear button
+        self.clear_button.setStyleSheet("background-color: #fb8c00; color: white;")  # Orange color for clear button
         controls_layout.addWidget(self.clear_button)
         
-        left_column.addLayout(controls_layout)
+        record_container_layout.addLayout(controls_layout)
         
         # Recording time display and scrub silences checkbox
         time_layout = QHBoxLayout()
@@ -305,7 +316,10 @@ class MainWindow(QMainWindow):
         spacer.setFixedHeight(20)
         time_layout.addWidget(spacer)
         
-        left_column.addLayout(time_layout)
+        record_container_layout.addLayout(time_layout)
+        
+        # Add the record container to the left column
+        left_column.addWidget(record_container)
         
         # Transcription progress bar
         self.progress_bar = QProgressBar()
@@ -317,15 +331,24 @@ class MainWindow(QMainWindow):
         
         # Transcribed text section
         transcribe_header = QLabel("TRANSCRIBE")
-        transcribe_header.setStyleSheet("font-size: 15px; font-weight: bold; color: white; background-color: rgba(76, 175, 80, 0.9); padding: 8px 12px; border-radius: 3px; margin-top: 10px;")
+        transcribe_header.setStyleSheet("font-size: 15px; font-weight: bold; color: #1A1A1A; background-color: #34A853; padding: 8px 12px; border-radius: 3px; margin-top: 10px;")
         left_column.addWidget(transcribe_header)
+        
+        # Add description text in a container with subtle background
+        transcribe_container = QWidget()
+        transcribe_container.setStyleSheet("background-color: #F0F8F1; border: 1px solid #D4E9D7; border-radius: 5px; padding: 10px; margin-bottom: 5px;")
+        transcribe_container_layout = QVBoxLayout(transcribe_container)
+        transcribe_container_layout.setContentsMargins(10, 10, 10, 10)
         
         # Add description text
         transcribe_description = QLabel("Text after transcription by Whisper API.")
         transcribe_description.setStyleSheet("font-style: italic; color: #666; margin-bottom: 6px; font-size: 12px;")
         transcribe_description.setWordWrap(True)
         transcribe_description.setFixedHeight(20)  # Set fixed height to prevent overlap
-        left_column.addWidget(transcribe_description)
+        transcribe_container_layout.addWidget(transcribe_description)
+        
+        # Add the transcribe container to the left column
+        left_column.addWidget(transcribe_container)
         
         # Transcribed text display
         left_column.addWidget(self.transcribed_text)
@@ -363,6 +386,7 @@ class MainWindow(QMainWindow):
         self.transcribe_button = QPushButton("Transcribe Audio")
         self.transcribe_button.clicked.connect(self.transcribe_audio)
         self.transcribe_button.setEnabled(False)
+        self.transcribe_button.setToolTip("Transcribe Audio (Ctrl+T)")
         transcribe_buttons_layout.addWidget(self.transcribe_button)
         
         self.transcribe_process_button = QPushButton("Transcribe and Process")
@@ -375,8 +399,14 @@ class MainWindow(QMainWindow):
         # ===== RIGHT COLUMN =====
         # Process section
         process_header = QLabel("PROCESS")
-        process_header.setStyleSheet("font-size: 15px; font-weight: bold; color: white; background-color: rgba(33, 150, 243, 0.9); padding: 8px 12px; border-radius: 3px; margin-bottom: 5px;")
+        process_header.setStyleSheet("font-size: 15px; font-weight: bold; color: #1A1A1A; background-color: #FBBC05; padding: 8px 12px; border-radius: 3px;")
         right_column.addWidget(process_header)
+        
+        # Add shaded container for process section
+        process_container = QWidget()
+        process_container.setStyleSheet("background-color: #FEF9E7; border: 1px solid #FCF3CF; border-radius: 5px; padding: 10px;")
+        process_container_layout = QVBoxLayout(process_container)
+        process_container_layout.setContentsMargins(10, 10, 10, 10)
         
         # Add description text
         process_description = QLabel(
@@ -385,7 +415,7 @@ class MainWindow(QMainWindow):
         process_description.setStyleSheet("font-style: italic; color: #666; margin-bottom: 6px; font-size: 12px;")
         process_description.setWordWrap(True)
         process_description.setFixedHeight(40)  # Set fixed height to prevent overlap
-        right_column.addWidget(process_description)
+        process_container_layout.addWidget(process_description)
         
         # Processing mode selection - replaced with a button to open modal
         mode_layout = QVBoxLayout()
@@ -395,7 +425,7 @@ class MainWindow(QMainWindow):
         mode_info_layout = QHBoxLayout()
         
         # Add selection count indicator
-        self.selection_count_label = QLabel("1 mode selected (Basic Cleanup)")
+        self.selection_count_label = QLabel("1 mode selected: Basic Cleanup Only")
         self.selection_count_label.setStyleSheet("font-weight: bold; color: #1565C0;")
         mode_info_layout.addWidget(self.selection_count_label)
         
@@ -416,16 +446,20 @@ class MainWindow(QMainWindow):
         self.mode_list.setVisible(False)  # Hide the list widget
         self.mode_list.itemSelectionChanged.connect(self.update_mode_selection_count)
         
-        right_column.addLayout(mode_layout)
+        process_container_layout.addLayout(mode_layout)
         
         # Process button
         process_button_layout = QHBoxLayout()
-        self.process_button = QPushButton("Process Text")
+        self.process_button = QPushButton("Process")
         self.process_button.clicked.connect(self.process_text)
         self.process_button.setEnabled(False)
+        self.process_button.setToolTip("Process Text (Ctrl+P)")
         process_button_layout.addWidget(self.process_button)
         process_button_layout.addStretch()
-        right_column.addLayout(process_button_layout)
+        process_container_layout.addLayout(process_button_layout)
+        
+        # Add the process container to the right column
+        right_column.addWidget(process_container)
         
         # Processed text display
         self.processed_text = QTextEdit()
@@ -462,14 +496,20 @@ class MainWindow(QMainWindow):
         
         # Save section
         save_header = QLabel("SAVE")
-        save_header.setStyleSheet("font-size: 15px; font-weight: bold; color: white; background-color: rgba(33, 150, 243, 0.9); padding: 8px 12px; border-radius: 3px; margin-top: 10px;")
+        save_header.setStyleSheet("font-size: 15px; font-weight: bold; color: #1A1A1A; background-color: #EA4335; padding: 8px 12px; border-radius: 3px; margin-top: 10px;")
         right_column.addWidget(save_header)
+        
+        # Add shaded container for save section
+        save_container = QWidget()
+        save_container.setStyleSheet("background-color: #FDEDEC; border: 1px solid #F5B7B1; border-radius: 5px; padding: 10px;")
+        save_container_layout = QVBoxLayout(save_container)
+        save_container_layout.setContentsMargins(10, 10, 10, 10)
         
         # Add description text
         save_description = QLabel("Save your processed text to a file.")
         save_description.setStyleSheet("font-style: italic; color: #666; margin-bottom: 6px; font-size: 12px;")
         save_description.setWordWrap(True)
-        right_column.addWidget(save_description)
+        save_container_layout.addWidget(save_description)
         
         # Auto-generated filename
         filename_layout = QHBoxLayout()
@@ -480,16 +520,22 @@ class MainWindow(QMainWindow):
         self.filename_display.setPlaceholderText("Autogenerated with processing or type manually")
         filename_layout.addWidget(self.filename_display, 1)
         
-        right_column.addLayout(filename_layout)
+        save_container_layout.addLayout(filename_layout)
         
         # Save button
         save_button_layout = QHBoxLayout()
-        self.save_button = QPushButton("Save Text")
+        self.save_button = QPushButton()
+        self.save_button.setIcon(QIcon.fromTheme("document-save"))
+        self.save_button.setText("Save")
         self.save_button.clicked.connect(self.save_text)
         self.save_button.setEnabled(False)
+        self.save_button.setToolTip("Save Text (Ctrl+W)")
         save_button_layout.addWidget(self.save_button)
         save_button_layout.addStretch()
-        right_column.addLayout(save_button_layout)
+        save_container_layout.addLayout(save_button_layout)
+        
+        # Add the save container to the right column
+        right_column.addWidget(save_container)
         
         # Populate audio devices
         self.populate_audio_devices()
@@ -531,7 +577,10 @@ class MainWindow(QMainWindow):
         self.settings_device_combo = QComboBox()
         device_settings_layout.addWidget(self.settings_device_combo, 1)
         
-        refresh_settings_button = QPushButton("Refresh")
+        # Refresh button in settings
+        refresh_settings_button = QPushButton()
+        refresh_settings_button.setIcon(QIcon.fromTheme("view-refresh"))
+        refresh_settings_button.setToolTip("Refresh Audio Devices")
         refresh_settings_button.clicked.connect(self.refresh_settings_audio_devices)
         device_settings_layout.addWidget(refresh_settings_button)
         
@@ -597,6 +646,11 @@ class MainWindow(QMainWindow):
         # Prompts list
         prompts_group = QGroupBox("Available Prompts")
         prompts_layout = QVBoxLayout(prompts_group)
+        
+        # Add prompts count label
+        self.prompts_count_label = QLabel()
+        self.prompts_count_label.setStyleSheet("font-weight: bold; color: #1565C0; margin-bottom: 5px;")
+        prompts_layout.addWidget(self.prompts_count_label)
         
         # Use QListWidget with custom item widgets for the tags
         self.prompts_list = QListWidget()
@@ -740,42 +794,32 @@ class MainWindow(QMainWindow):
         scroll_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         
         # App title
-        title_label = QLabel("Linux Whisper Notepad")
+        title_label = QLabel("Speech Note Capture")
         title_label.setStyleSheet("font-size: 24px; font-weight: bold; color: #1565C0;")
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         scroll_layout.addWidget(title_label)
         
         # Description
         description = QLabel(
-            "<p>Linux Whisper Notepad is an AI-powered speech-to-text application "
-            "that allows you to transcribe audio recordings and process the text using "
+            "<p>Speech Note Capture is an AI-powered speech-to-text application "
+            "that allows you to transcribe audio recordings and optionally process the text using "
             "various AI-driven formatting options.</p>"
             
-            "<p>This project was developed as an AI code generation project using "
-            "Sonnet 3.7, Windsurf, and iterative prompting and editing. It is a work in progress.</p>"
+            "<p><strong>Important:</strong> Processing is completely optional but can significantly enhance the utility "
+            "of your transcriptions. You can use this application simply for transcription, or take advantage "
+            "of the powerful text processing capabilities to format and refine your dictated content.</p>"
             
             "<p>The application uses OpenAI's Whisper API for speech recognition and "
             "GPT models for text processing, providing a seamless experience for "
             "converting spoken words into formatted text.</p>"
+            
+            "<p>This project was developed as an AI code generation project using "
+            "Sonnet 3.7, Windsurf, and iterative prompting and editing.</p>"
         )
         description.setWordWrap(True)
         description.setStyleSheet("font-size: 14px; margin: 10px 0;")
         description.setTextFormat(Qt.TextFormat.RichText)
         scroll_layout.addWidget(description)
-        
-        # Repository link
-        repo_layout = QHBoxLayout()
-        repo_label = QLabel("GitHub Repository:")
-        repo_label.setStyleSheet("font-weight: bold;")
-        repo_layout.addWidget(repo_label)
-        
-        repo_link = QLabel("<a href='https://github.com/danielrosehill/Whisper-Notepad-For-Linux'>https://github.com/danielrosehill/Whisper-Notepad-For-Linux</a>")
-        repo_link.setOpenExternalLinks(True)
-        repo_link.setTextFormat(Qt.TextFormat.RichText)
-        repo_layout.addWidget(repo_link)
-        repo_layout.addStretch()
-        
-        scroll_layout.addLayout(repo_layout)
         
         # Features section
         features_label = QLabel("Key Features:")
@@ -789,6 +833,7 @@ class MainWindow(QMainWindow):
             "<li>Process text with various AI-powered formatting options</li>"
             "<li>Create and customize your own text processing prompts</li>"
             "<li>Save processed text to files with auto-generated filenames</li>"
+            "<li>Apply multiple processing modes simultaneously</li>"
             "</ul>"
         )
         features_list.setTextFormat(Qt.TextFormat.RichText)
@@ -798,6 +843,20 @@ class MainWindow(QMainWindow):
         # Add some spacing
         scroll_layout.addStretch()
         
+        # Repository link at the bottom
+        repo_layout = QHBoxLayout()
+        repo_label = QLabel("GitHub Repository:")
+        repo_label.setStyleSheet("font-weight: bold;")
+        repo_layout.addWidget(repo_label)
+        
+        repo_link = QLabel("<a href='https://github.com/danielrosehill/Whisper-Notepad-For-Linux'>https://github.com/danielrosehill/Whisper-Notepad-For-Linux</a>")
+        repo_link.setOpenExternalLinks(True)
+        repo_link.setTextFormat(Qt.TextFormat.RichText)
+        repo_layout.addWidget(repo_link)
+        repo_layout.addStretch()
+        
+        scroll_layout.addLayout(repo_layout)
+        
         # Add the scroll area to the main layout
         layout.addWidget(scroll_area)
     
@@ -806,6 +865,10 @@ class MainWindow(QMainWindow):
         self.prompts_list.clear()
         
         modes = self.openai_manager.get_available_modes()
+        
+        # Update the prompts count label
+        self.prompts_count_label.setText(f"{len(modes)} system prompts available")
+        
         for mode in modes:
             # Create item with type label (Default or User)
             is_default = mode["id"] in self.openai_manager.DEFAULT_TEXT_PROCESSING_MODES
@@ -1873,11 +1936,14 @@ class MainWindow(QMainWindow):
             self.selection_count_label.setText("No modes selected")
         elif count == 1:
             mode_name = selected_items[0].text()
-            self.selection_count_label.setText(f"1 mode selected: {mode_name}")
+            # Only show "Basic Cleanup Only" when that mode is selected
+            if mode_name == "Basic Cleanup":
+                self.selection_count_label.setText("1 mode selected: Basic Cleanup Only")
+            else:
+                self.selection_count_label.setText(f"1 mode selected: {mode_name}")
         else:
-            # If more than one mode is selected, show the count and the first mode with "..."
-            first_mode = selected_items[0].text()
-            self.selection_count_label.setText(f"{count} modes selected: {first_mode}, ...")
+            # If more than one mode is selected, just show the count
+            self.selection_count_label.setText(f"{count} modes selected")
         
         # Enable/disable the process button based on selection count and transcribed text
         has_text = bool(self.transcribed_text.toPlainText().strip())
@@ -1905,6 +1971,15 @@ class MainWindow(QMainWindow):
         description.setWordWrap(True)
         layout.addWidget(description)
         
+        # Add explanatory text about basic cleanup prompt
+        basic_cleanup_info = QLabel(
+            "Note: The basic cleaning prompt is automatically prepended before any additional prompts, "
+            "except for JSON-requiring prompts which are processed separately."
+        )
+        basic_cleanup_info.setStyleSheet("color: #1565C0; background-color: #E3F2FD; padding: 8px; border-radius: 4px; margin-bottom: 10px;")
+        basic_cleanup_info.setWordWrap(True)
+        layout.addWidget(basic_cleanup_info)
+        
         # Add search box for filtering modes in the dialog
         search_layout = QHBoxLayout()
         search_label = QLabel("Search:")
@@ -1931,8 +2006,21 @@ class MainWindow(QMainWindow):
             QListWidget::item:alternate {
                 background-color: #f9f9f9;
             }
+            QListWidget::item:selected {
+                background-color: #e3f2fd;
+                color: #000;
+            }
+            QListWidget::item:hover {
+                background-color: #f5f5f5;
+                color: #000;
+            }
         """)
         layout.addWidget(mode_list)
+        
+        # Add selection count label
+        self.dialog_selection_count = QLabel("0 prompts selected")
+        self.dialog_selection_count.setStyleSheet("font-weight: bold; color: #1565C0; margin-top: 5px;")
+        layout.addWidget(self.dialog_selection_count)
         
         # Add a details text area to show mode descriptions
         details_label = QLabel("Mode Description:")
@@ -1949,7 +2037,10 @@ class MainWindow(QMainWindow):
         # Populate the list with modes and set checkboxes based on current selection
         modes = self.openai_manager.get_available_modes()
         for mode in modes:
-            item = QListWidgetItem(mode["name"])
+            # Rename "Basic Cleanup" to "Basic Cleanup Only" in the display
+            display_name = "Basic Cleanup Only" if mode["id"] == "basic_cleanup" else mode["name"]
+            
+            item = QListWidgetItem(display_name)
             item.setData(Qt.ItemDataRole.UserRole, mode["id"])
             item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
             
@@ -1968,18 +2059,8 @@ class MainWindow(QMainWindow):
             item.setCheckState(Qt.CheckState.Checked if is_selected else Qt.CheckState.Unchecked)
             mode_list.addItem(item)
         
-        # Add buttons for select all and deselect all
+        # Add buttons layout
         button_layout = QHBoxLayout()
-        
-        select_all_button = QPushButton("Select All")
-        select_all_button.setStyleSheet("padding: 6px 12px;")
-        select_all_button.clicked.connect(lambda: self.select_all_modes(mode_list))
-        button_layout.addWidget(select_all_button)
-        
-        deselect_all_button = QPushButton("Deselect All")
-        deselect_all_button.setStyleSheet("padding: 6px 12px;")
-        deselect_all_button.clicked.connect(lambda: self.deselect_all_modes(mode_list))
-        button_layout.addWidget(deselect_all_button)
         
         # Add a button to select only basic cleanup
         basic_cleanup_button = QPushButton("Select Only Basic Cleanup")
@@ -2005,6 +2086,18 @@ class MainWindow(QMainWindow):
         # Connect signals
         mode_list.itemClicked.connect(lambda item: self.show_mode_description(item, details_text))
         dialog_search_edit.textChanged.connect(lambda text: self.filter_dialog_modes(text, mode_list))
+        
+        # Function to update selection count in the dialog
+        def update_dialog_selection_count():
+            selected_count = sum(1 for i in range(mode_list.count()) 
+                               if mode_list.item(i).checkState() == Qt.CheckState.Checked)
+            self.dialog_selection_count.setText(f"{selected_count} prompt{'s' if selected_count != 1 else ''} selected")
+        
+        # Connect item change signal to update count
+        mode_list.itemChanged.connect(lambda item: update_dialog_selection_count())
+        
+        # Initial count update
+        update_dialog_selection_count()
         
         # Show the dialog
         dialog.exec()
@@ -2102,3 +2195,25 @@ class MainWindow(QMainWindow):
         
         # Close the dialog
         dialog.accept()
+    
+    def setup_shortcuts(self):
+        """Set up keyboard shortcuts for main actions"""
+        # Record shortcut (Ctrl+R)
+        self.record_shortcut = QShortcut(QKeySequence("Ctrl+R"), self)
+        self.record_shortcut.activated.connect(self.start_recording)
+        
+        # Stop shortcut (Ctrl+S)
+        self.stop_shortcut = QShortcut(QKeySequence("Ctrl+S"), self)
+        self.stop_shortcut.activated.connect(self.stop_recording)
+        
+        # Transcribe shortcut (Ctrl+T)
+        self.transcribe_shortcut = QShortcut(QKeySequence("Ctrl+T"), self)
+        self.transcribe_shortcut.activated.connect(self.transcribe_audio)
+        
+        # Process shortcut (Ctrl+P)
+        self.process_shortcut = QShortcut(QKeySequence("Ctrl+P"), self)
+        self.process_shortcut.activated.connect(self.process_text)
+        
+        # Save shortcut (Ctrl+W) - using W to avoid conflict with Ctrl+S for stop
+        self.save_shortcut = QShortcut(QKeySequence("Ctrl+W"), self)
+        self.save_shortcut.activated.connect(self.save_text)

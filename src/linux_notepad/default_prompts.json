@@ -831,5 +831,155 @@
         "prompt": "Convert the following dictated text into a prompt that explicitly requests ethical analysis. Structure it to identify the ethical dimensions of a question or problem, ask for consideration of multiple ethical frameworks or perspectives, request discussion of potential harms and benefits, and encourage nuanced reasoning about ethical tradeoffs. The result should elicit responses that demonstrate thoughtful ethical reflection.",
         "requires_json": false,
         "description": "Creates prompts that focus on ethical dimensions and considerations of a topic"
+    },
+    "readme_format": {
+        "name": "README Format",
+        "prompt": "Format the following dictated text as a GitHub README.md file. Include appropriate sections such as introduction, installation instructions, usage examples, features, contributing guidelines, and license information where applicable. Use proper markdown formatting with headings, code blocks, lists, and emphasis where appropriate.",
+        "requires_json": false,
+        "description": "Formats text in the style of a GitHub repository README file with proper markdown sections"
+    },
+    "letter_format": {
+        "name": "Letter Format",
+        "prompt": "Format the following dictated text as a traditional formal letter. Include sender address, date, recipient address, formal greeting, body paragraphs, complimentary close, and signature. Maintain proper spacing and formatting conventions used in traditional printed correspondence.",
+        "requires_json": false,
+        "description": "Formats text as a traditional printed letter with proper addressing and structure"
+    },
+    "instructions_format": {
+        "name": "Instructions Format",
+        "prompt": "Convert the following dictated text into a clear, step-by-step list of instructions. Number each step sequentially, use concise and direct language, group related steps into sections if needed, and include any warnings or tips in a visually distinct format.",
+        "requires_json": false,
+        "description": "Formats text as a numbered list of clear, sequential instructions"
+    },
+    "howto_guide": {
+        "name": "How-To Guide",
+        "prompt": "Transform the following dictated text into a comprehensive how-to guide. Include an introduction explaining the purpose and outcome, a materials/prerequisites section, step-by-step instructions with clear headings, troubleshooting tips, and a conclusion. Use a friendly, instructional tone throughout.",
+        "requires_json": false,
+        "description": "Formats text as a detailed how-to guide with sections for materials, steps, and troubleshooting"
+    },
+    "oped_format": {
+        "name": "Op-Ed Format",
+        "prompt": "Reformat the following dictated text as an opinion editorial (op-ed). Include a compelling headline, a strong opening paragraph that states the main argument, supporting paragraphs with evidence and reasoning, counterarguments with rebuttals, and a persuasive conclusion. Use a confident, authoritative tone while maintaining a respectful approach to opposing viewpoints.",
+        "requires_json": false,
+        "description": "Formats text as an opinion editorial with persuasive arguments and a clear position"
+    },
+    "letter_to_editor": {
+        "name": "Letter to Editor",
+        "prompt": "Format the following dictated text as a letter to the editor of a publication. Include a concise headline, a formal salutation, a brief introduction referencing the article or issue being addressed, a clear statement of your position, supporting points, and a conclusion with a call to action if appropriate. Keep the tone respectful yet persuasive.",
+        "requires_json": false,
+        "description": "Formats text as a letter to the editor with proper structure and persuasive elements"
+    },
+    "log_format": {
+        "name": "Log Format",
+        "prompt": "Format the following dictated text as a chronological log entry. Begin with the timestamp provided by the user, followed by structured, concise entries that document events, observations, or data points. Use consistent formatting for each entry, separate entries clearly, and maintain an objective, factual tone throughout.",
+        "requires_json": false,
+        "description": "Formats text as a timestamped log entry with consistent structure for recording information"
+    },
+    "bug_report_format": {
+        "name": "Bug Report Format",
+        "prompt": "Format the following dictated text as a formal bug report. Include sections for summary, environment details, steps to reproduce, expected behavior, actual behavior, and any relevant error messages or logs. Use clear, technical language and provide sufficient detail for developers to understand and address the issue. Add severity and priority indicators if possible.",
+        "requires_json": false,
+        "description": "Formats text as a structured bug report with technical details for developers"
+    },
+    "colleague_request_format": {
+        "name": "Colleague Request Format",
+        "prompt": "Format the following dictated text as a professional request to a colleague. Include a courteous greeting, clear context for the request, specific details of what you're asking for, any relevant deadlines or constraints, an explanation of why this request is important, and a polite closing. Maintain a collegial, respectful tone throughout.",
+        "requires_json": false,
+        "description": "Formats text as a professional and clear request to a colleague with proper context"
+    },
+    "feature_request_format": {
+        "name": "Feature Request Format",
+        "prompt": "Format the following dictated text as a technical feature request. Structure it with sections for feature summary, problem statement/user need, proposed solution, technical requirements, potential implementation approaches, expected benefits, and success metrics. Use precise technical language and provide sufficient detail for developers to understand the scope and purpose of the requested feature.",
+        "requires_json": false,
+        "description": "Formats text as a detailed technical feature request with clear requirements and rationale"
+    },
+    "changelog_format": {
+        "name": "Changelog Format",
+        "prompt": "Format the following dictated text as a structured changelog. Organize changes into categories (Added, Changed, Fixed, Removed, Security, Deprecated), use bullet points for each entry, include version numbers if available, add dates for each version or change group, and maintain a concise, technical tone. Focus on what changed rather than why, and ensure each entry clearly communicates the modification made.",
+        "requires_json": false,
+        "description": "Formats text as a structured changelog with categorized entries and clear version tracking"
+    },
+    "status_update_format": {
+        "name": "Status Update Format",
+        "prompt": "Format the following dictated text as a professional status update for a work context. Include sections for accomplishments since last update, current priorities, blockers or challenges, next steps, and any assistance needed. Use concise bullet points, highlight key metrics or deliverables, maintain a professional tone, and ensure the update provides a clear picture of progress and plans. Add a brief executive summary at the beginning if the update is lengthy.",
+        "requires_json": false,
+        "description": "Formats text as a professional status update with clear sections for accomplishments, priorities, and next steps"
+    },
+    "budget_request_format": {
+        "name": "Budget Request Format",
+        "prompt": "Format the following dictated text as a formal budget request in a business context. Include sections for executive summary, project background, detailed cost breakdown, justification for each expense, expected ROI or benefits, timeline for fund utilization, alternatives considered, and requested approval actions. Use precise financial terminology, include specific amounts and timeframes, and maintain a professional, persuasive tone that emphasizes business value.",
+        "requires_json": false,
+        "description": "Formats text as a comprehensive budget request with detailed cost justification and expected benefits"
+    },
+    "approval_request_format": {
+        "name": "Approval Request Format",
+        "prompt": "Format the following dictated text as a formal approval request in a business context. Include sections for request summary, background context, detailed description of what requires approval, business justification, impact analysis (risks and benefits), timeline considerations, required resources, and specific approval actions requested. Use clear, professional language, highlight decision points explicitly, and provide sufficient information for decision-makers to evaluate the request thoroughly.",
+        "requires_json": false,
+        "description": "Formats text as a structured approval request with clear justification and specific approval actions needed"
+    },
+    "general_note_format": {
+        "name": "General Note Format",
+        "prompt": "Format the following dictated text as a clear, well-structured note. Add appropriate headings if needed, organize information logically, use bullet points for lists, ensure proper paragraph spacing, and maintain a clean, readable format. Preserve the original meaning while enhancing clarity and organization.",
+        "requires_json": false,
+        "description": "Formats text as a standard note with clear organization and structure"
+    },
+    "whatsapp_message_format": {
+        "name": "WhatsApp Message Format",
+        "prompt": "Convert the following dictated text into a concise WhatsApp message. Make it as brief as possible by removing unnecessary words, using common abbreviations, eliminating formalities, and focusing only on essential information. The result should be conversational, direct, and suitable for instant messaging.",
+        "requires_json": false,
+        "description": "Formats text as a brief WhatsApp message, optimized for instant messaging"
+    },
+    "sms_message_format": {
+        "name": "SMS Message Format",
+        "prompt": "Convert the following dictated text into an SMS message, strictly limiting it to 160 characters maximum (the standard SMS character limit). Prioritize essential information, use abbreviations where appropriate, remove all unnecessary words, and ensure the core message is preserved despite the severe length constraint.",
+        "requires_json": false,
+        "description": "Formats text as an SMS message with strict 160-character limit"
+    },
+    "word_character_count_constraint": {
+        "name": "Word/Character Count Constraint",
+        "prompt": "Rewrite the following text to fit within the specified word or character limit while preserving the most important information. If a specific count is mentioned in the text (e.g., '100 words'), use that as the maximum. Prioritize key points, remove redundancies, and ensure the result remains coherent and complete despite the constraints.",
+        "requires_json": false,
+        "description": "Enforces specified word or character count limits while preserving essential content"
+    },
+    "out_of_office_responder": {
+        "name": "Out-of-Office Responder",
+        "prompt": "Format the following dictated text as a professional out-of-office email auto-response. Include a clear statement of absence, specific absence dates, reason for unavailability (if provided), alternative contact information for urgent matters, expected response timeframe upon return, and an appropriate sign-off. Maintain a professional but friendly tone and ensure all essential information is presented concisely.",
+        "requires_json": false,
+        "description": "Formats text as an out-of-office automatic email response with absence details and alternative contacts"
+    },
+    "auto_reply": {
+        "name": "Auto-Reply Message",
+        "prompt": "Format the following dictated text as an automatic reply message. Create a concise, informative response that acknowledges receipt of communication, sets clear expectations for follow-up or processing time, provides any necessary next steps or alternative actions, and maintains a professional tone. The message should be formatted appropriately for automated responses across email or messaging platforms.",
+        "requires_json": false,
+        "description": "Formats text as an automatic reply message with clear expectations and next steps"
+    },
+    "preserve_placeholders": {
+        "name": "Preserve Placeholder Values",
+        "prompt": "Format the following dictated text while preserving all placeholder values (such as [NAME], {DATE}, <EMAIL>, etc.). Improve the structure, clarity, and presentation of the text, but ensure that any placeholder markers and their contents remain intact and in their original format. These placeholders will be replaced with actual values later, so they must be preserved exactly as dictated.",
+        "requires_json": false,
+        "description": "Formats text while ensuring all placeholder values remain intact for later replacement"
+    },
+    "transactional_email": {
+        "name": "Transactional Email",
+        "prompt": "Format the following dictated text as a transactional notification email. Structure it with a clear subject line, concise greeting, specific details of the transaction or event, any required action items highlighted prominently, relevant reference numbers or dates, and appropriate closing with contact information if needed. Use a professional, straightforward tone typical of automated system notifications while maintaining clarity and accessibility.",
+        "requires_json": false,
+        "description": "Formats text as a transactional notification email with clear structure and action items"
+    },
+    "marketing_email": {
+        "name": "Marketing Email",
+        "prompt": "Format the following dictated text as an engaging marketing email. Structure it with an attention-grabbing subject line, personalized greeting, compelling opening that highlights value proposition, concise body with clear benefits (not just features), prominent call-to-action, sense of urgency or special offer if applicable, and professional sign-off. Use persuasive language, short paragraphs, and a conversational yet professional tone that encourages recipient engagement and action.",
+        "requires_json": false,
+        "description": "Formats text as a persuasive marketing email with compelling value proposition and clear call-to-action"
+    },
+    "ai_system_prompt": {
+        "name": "AI System Prompt",
+        "prompt": "Format the following dictated text as a system prompt for configuring an AI assistant. Structure it with a clear definition of the assistant's role, specific instructions on how the assistant should behave, knowledge domains it should draw from, tone and style guidelines, constraints or limitations, and format expectations for responses. Begin with 'You are a [role]' and use direct, imperative language throughout. The result should follow standard conventions for AI system prompts that effectively guide an assistant's behavior.",
+        "requires_json": false,
+        "description": "Formats text as a system prompt for configuring AI assistants with clear role definition and behavioral instructions"
+    },
+    "context_data_extraction": {
+        "name": "Context Data Extraction",
+        "prompt": "Extract only the specific context data from the following text that would be useful for setting context in an AI system. Identify the user by name and reformat the content in third person. Convert first-person references to third-person statements. Present the information as a streamlined, condensed series of factual statements without commentary. Focus only on relevant context data such as preferences, background information, technical details, and specific requirements.",
+        "requires_json": false,
+        "description": "Extracts and reformats context data in third person for use in AI system context windows"
     }
 }
