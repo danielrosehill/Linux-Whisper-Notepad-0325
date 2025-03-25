@@ -198,14 +198,26 @@ class AudioManager:
     def pause_recording(self):
         """Pause audio recording"""
         if self.is_recording and not self.is_paused:
+            # Set the paused flag
             self.is_paused = True
+            
+            # Stop the stream but don't close it
+            if self.stream and self.stream.is_active():
+                self.stream.stop_stream()
+                
             return True
         return False
     
     def resume_recording(self):
         """Resume audio recording"""
         if self.is_recording and self.is_paused:
+            # Clear the paused flag
             self.is_paused = False
+            
+            # Start the stream again if it's stopped
+            if self.stream and not self.stream.is_active():
+                self.stream.start_stream()
+                
             return True
         return False
     

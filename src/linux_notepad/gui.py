@@ -114,14 +114,15 @@ class MainWindow(QMainWindow):
     def init_ui(self):
         """Initialize the user interface"""
         self.setWindowTitle("Linux Whisper Notepad")
-        self.setMinimumSize(900, 700)  # Increased minimum size for better UI
+        self.setMinimumSize(1100, 850)  # Further increased minimum size to prevent layout issues
         
         # Create central widget and main layout
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         
         main_layout = QVBoxLayout(central_widget)
-        main_layout.setSpacing(8)  # Reduce spacing between elements
+        main_layout.setSpacing(10)  # Increased spacing between elements
+        main_layout.setContentsMargins(15, 15, 15, 15)  # Increased margins to prevent elements from touching window edges
         
         # Add Clear All button at the top
         clear_all_layout = QHBoxLayout()
@@ -134,9 +135,9 @@ class MainWindow(QMainWindow):
         
         # Add prominent recording time display at the top
         self.main_time_display = QLabel("00:00")
-        self.main_time_display.setStyleSheet("background-color: #1565C0; color: white; font-weight: bold; font-size: 24px; padding: 5px 15px; border-radius: 5px;")
+        self.main_time_display.setStyleSheet("background-color: #1565C0; color: white; font-weight: bold; font-size: 24px; padding: 8px 20px; border-radius: 5px;")
         self.main_time_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.main_time_display.setFixedWidth(120)
+        self.main_time_display.setFixedWidth(150)  # Increased width
         main_layout.addWidget(self.main_time_display, 0, Qt.AlignmentFlag.AlignCenter)
         
         # Create tab widget for main functionality and settings
@@ -190,14 +191,17 @@ class MainWindow(QMainWindow):
         """Set up the main tab UI"""
         # Create a horizontal layout for the two columns
         columns_layout = QHBoxLayout()
+        columns_layout.setSpacing(20)  # Further increased spacing between columns
         
         # Create left column layout
         left_column = QVBoxLayout()
-        left_column.setContentsMargins(0, 0, 10, 0)  # Add right margin for spacing between columns
+        left_column.setContentsMargins(8, 8, 8, 8)  # Increased padding within the column
+        left_column.setSpacing(8)  # Set consistent spacing between elements
         
         # Create right column layout
         right_column = QVBoxLayout()
-        right_column.setContentsMargins(10, 0, 0, 0)  # Add left margin for spacing between columns
+        right_column.setContentsMargins(8, 8, 8, 8)  # Increased padding within the column
+        right_column.setSpacing(8)  # Set consistent spacing between elements
         
         # Add columns to the main layout
         columns_layout.addLayout(left_column, 1)  # 1 is the stretch factor
@@ -207,13 +211,14 @@ class MainWindow(QMainWindow):
         # ===== LEFT COLUMN =====
         # Record section
         record_header = QLabel("RECORD")
-        record_header.setStyleSheet("font-size: 15px; font-weight: bold; color: white; background-color: rgba(33, 150, 243, 0.9); padding: 5px 10px; border-radius: 2px;")
+        record_header.setStyleSheet("font-size: 15px; font-weight: bold; color: white; background-color: rgba(33, 150, 243, 0.9); padding: 8px 12px; border-radius: 3px; margin-bottom: 5px;")
         left_column.addWidget(record_header)
         
         # Add description text
         record_description = QLabel("Record audio from your microphone to transcribe into text.")
-        record_description.setStyleSheet("font-style: italic; color: #666; margin-bottom: 4px; font-size: 11px;")
+        record_description.setStyleSheet("font-style: italic; color: #666; margin-bottom: 6px; font-size: 12px;")
         record_description.setWordWrap(True)
+        record_description.setFixedHeight(20)  # Set fixed height to prevent overlap
         left_column.addWidget(record_description)
         
         # Audio device selection
@@ -312,13 +317,14 @@ class MainWindow(QMainWindow):
         
         # Transcribed text section
         transcribe_header = QLabel("TRANSCRIBE")
-        transcribe_header.setStyleSheet("font-size: 15px; font-weight: bold; color: white; background-color: rgba(76, 175, 80, 0.9); padding: 5px 10px; border-radius: 2px; margin-top: 10px;")
+        transcribe_header.setStyleSheet("font-size: 15px; font-weight: bold; color: white; background-color: rgba(76, 175, 80, 0.9); padding: 8px 12px; border-radius: 3px; margin-top: 10px;")
         left_column.addWidget(transcribe_header)
         
         # Add description text
         transcribe_description = QLabel("Text after transcription by Whisper API.")
-        transcribe_description.setStyleSheet("font-style: italic; color: #666; margin-bottom: 4px; font-size: 11px;")
+        transcribe_description.setStyleSheet("font-style: italic; color: #666; margin-bottom: 6px; font-size: 12px;")
         transcribe_description.setWordWrap(True)
+        transcribe_description.setFixedHeight(20)  # Set fixed height to prevent overlap
         left_column.addWidget(transcribe_description)
         
         # Transcribed text display
@@ -326,7 +332,7 @@ class MainWindow(QMainWindow):
         
         # Add edit hint for transcribed text
         transcribe_edit_hint = QLabel("You can edit the transcribed text before processing.")
-        transcribe_edit_hint.setStyleSheet("font-style: italic; color: #666; font-size: 11px;")
+        transcribe_edit_hint.setStyleSheet("font-style: italic; color: #666; font-size: 12px;")
         left_column.addWidget(transcribe_edit_hint)
         
         # Add clear and copy buttons for transcribed text
@@ -369,25 +375,72 @@ class MainWindow(QMainWindow):
         # ===== RIGHT COLUMN =====
         # Process section
         process_header = QLabel("PROCESS")
-        process_header.setStyleSheet("font-size: 15px; font-weight: bold; color: white; background-color: rgba(33, 150, 243, 0.9); padding: 5px 10px; border-radius: 2px;")
+        process_header.setStyleSheet("font-size: 15px; font-weight: bold; color: white; background-color: rgba(33, 150, 243, 0.9); padding: 8px 12px; border-radius: 3px; margin-bottom: 5px;")
         right_column.addWidget(process_header)
         
         # Add description text
-        process_description = QLabel("Choose a formatting instruction to improve and process the dictated text. If you don't have a specific format in mind, using the default basic cleanup setting is recommended.")
-        process_description.setStyleSheet("font-style: italic; color: #666; margin-bottom: 4px; font-size: 11px;")
+        process_description = QLabel(
+            "Choose a formatting instruction to improve and process the dictated text. If you don't have a specific format in mind, using the default basic cleanup setting is recommended."
+        )
+        process_description.setStyleSheet("font-style: italic; color: #666; margin-bottom: 6px; font-size: 12px;")
         process_description.setWordWrap(True)
+        process_description.setFixedHeight(40)  # Set fixed height to prevent overlap
         right_column.addWidget(process_description)
         
         # Processing mode selection
-        mode_layout = QHBoxLayout()
+        mode_layout = QVBoxLayout()  # Changed to vertical layout to stack search box and list
+        mode_layout.setSpacing(12)  # Further increase spacing between elements
         mode_label = QLabel("Processing Mode(s):")
+        mode_label.setStyleSheet("font-weight: bold; font-size: 13px;")
         mode_layout.addWidget(mode_label)
+        
+        # Add search box for processing modes
+        search_layout = QHBoxLayout()
+        search_layout.setSpacing(10)  # Increase spacing
+        search_label = QLabel("Search:")
+        search_label.setFixedWidth(60)  # Set fixed width to prevent layout shifts
+        self.mode_search_edit = QLineEdit()
+        self.mode_search_edit.setPlaceholderText("Search processing modes...")
+        self.mode_search_edit.textChanged.connect(self.filter_processing_modes)
+        search_layout.addWidget(search_label)
+        search_layout.addWidget(self.mode_search_edit)
+        mode_layout.addLayout(search_layout)
+        
+        # Add selection count indicator above the list
+        selection_info_layout = QHBoxLayout()
+        selection_info_layout.setSpacing(15)  # Further increase spacing
+        self.selection_count_label = QLabel("0 modes selected")
+        self.selection_count_label.setStyleSheet("font-weight: bold; color: #1565C0;")
+        selection_info_layout.addWidget(self.selection_count_label)
+        
+        self.manage_selections_button = QPushButton("Manage Selections")
+        self.manage_selections_button.setStyleSheet("padding: 5px 10px;")
+        self.manage_selections_button.clicked.connect(self.show_manage_selections_dialog)
+        self.manage_selections_button.setEnabled(False)
+        selection_info_layout.addWidget(self.manage_selections_button)
+        
+        mode_layout.addLayout(selection_info_layout)
         
         # Replace QComboBox with QListWidget for multiple selection
         self.mode_list = QListWidget()
         self.mode_list.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
-        self.mode_list.setMinimumHeight(150)  # Set a minimum height to show multiple items
-        mode_layout.addWidget(self.mode_list, 1)
+        self.mode_list.setMinimumHeight(220)  # Increased minimum height to show more items
+        self.mode_list.setMaximumHeight(250)  # Set maximum height to prevent excessive expansion
+        # Use a left-side bar indicator for selection instead of full background
+        self.mode_list.setStyleSheet("""
+            QListWidget::item { 
+                padding: 5px; 
+                border-bottom: 1px solid #e0e0e0;
+            }
+            QListWidget::item:selected { 
+                border-left: 4px solid #2196F3;
+                padding-left: 2px;
+                background-color: #E3F2FD;
+                color: #000000;
+            }
+        """)
+        self.mode_list.itemSelectionChanged.connect(self.update_mode_selection_count)
+        mode_layout.addWidget(self.mode_list)
         
         right_column.addLayout(mode_layout)
         
@@ -408,7 +461,7 @@ class MainWindow(QMainWindow):
         
         # Add edit hint for processed text
         processed_edit_hint = QLabel("You can edit the processed text before saving.")
-        processed_edit_hint.setStyleSheet("font-style: italic; color: #666; font-size: 11px;")
+        processed_edit_hint.setStyleSheet("font-style: italic; color: #666; font-size: 12px;")
         right_column.addWidget(processed_edit_hint)
         
         # Add clear and copy buttons for processed text
@@ -435,12 +488,12 @@ class MainWindow(QMainWindow):
         
         # Save section
         save_header = QLabel("SAVE")
-        save_header.setStyleSheet("font-size: 15px; font-weight: bold; color: white; background-color: rgba(33, 150, 243, 0.9); padding: 5px 10px; border-radius: 2px; margin-top: 10px;")
+        save_header.setStyleSheet("font-size: 15px; font-weight: bold; color: white; background-color: rgba(33, 150, 243, 0.9); padding: 8px 12px; border-radius: 3px; margin-top: 10px;")
         right_column.addWidget(save_header)
         
         # Add description text
         save_description = QLabel("Save your processed text to a file.")
-        save_description.setStyleSheet("font-style: italic; color: #666; margin-bottom: 4px; font-size: 11px;")
+        save_description.setStyleSheet("font-style: italic; color: #666; margin-bottom: 6px; font-size: 12px;")
         save_description.setWordWrap(True)
         right_column.addWidget(save_description)
         
@@ -633,7 +686,7 @@ class MainWindow(QMainWindow):
         """Set up the variables tab UI"""
         # Instructions header
         header_label = QLabel("VARIABLES")
-        header_label.setStyleSheet("font-size: 15px; font-weight: bold; color: white; background-color: rgba(33, 150, 243, 0.9); padding: 5px 10px; border-radius: 2px;")
+        header_label.setStyleSheet("font-size: 15px; font-weight: bold; color: white; background-color: rgba(33, 150, 243, 0.9); padding: 8px 12px; border-radius: 3px;")
         layout.addWidget(header_label)
         
         # Description
@@ -1148,15 +1201,31 @@ class MainWindow(QMainWindow):
     
     def populate_processing_modes(self):
         """Populate the processing modes list widget"""
+        # Clear existing items
         self.mode_list.clear()
         
+        # Get available modes from OpenAI manager
         modes = self.openai_manager.get_available_modes()
+        
+        # Add modes to the list widget
         for mode in modes:
+            # Create a list item
             item = QListWidgetItem(mode["name"])
+            
+            # Store the mode info in the item's data
             item.setData(Qt.ItemDataRole.UserRole, mode["id"])
+            
             # Set tooltip to show description
-            item.setToolTip(mode.get("description", mode.get("prompt", "")[:100] + "..."))
+            tooltip_text = mode.get("description", mode.get("prompt", "")[:100] + "...").replace("\n", " ")
+            item.setToolTip(tooltip_text)
+            
+            # Add the item to the list
             self.mode_list.addItem(item)
+        
+        # Set fixed height based on number of items (with a maximum)
+        num_items = min(7, self.mode_list.count())  # Reduced to show fewer items at once
+        item_height = 35  # Increased height per item for better readability
+        self.mode_list.setFixedHeight(num_items * item_height + 15)  # Added more padding
         
         # Select "Basic Cleanup" by default
         for i in range(self.mode_list.count()):
@@ -1164,6 +1233,9 @@ class MainWindow(QMainWindow):
             if item.data(Qt.ItemDataRole.UserRole) == "basic_cleanup":
                 item.setSelected(True)
                 break
+                
+        # Update the selection count
+        self.update_mode_selection_count()
     
     def populate_audio_devices(self):
         """Populate the list of audio devices"""
@@ -1423,17 +1495,24 @@ class MainWindow(QMainWindow):
         
         # Get selected mode IDs
         selected_modes = []
+        selected_mode_names = []
         for i in range(self.mode_list.count()):
             item = self.mode_list.item(i)
             if item.isSelected():
                 mode_id = item.data(Qt.ItemDataRole.UserRole)
                 selected_modes.append(mode_id)
+                selected_mode_names.append(item.text())
         
         if not selected_modes:
             QMessageBox.warning(self, "Warning", "No processing mode selected")
             return
         
-        self.statusBar().showMessage("Processing text...")
+        # Update status message based on number of selected modes
+        if len(selected_modes) == 1:
+            self.statusBar().showMessage(f"Processing text with mode: {selected_mode_names[0]}...")
+        else:
+            self.statusBar().showMessage(f"Processing text with {len(selected_modes)} modes...")
+        
         QApplication.processEvents()
         
         try:
@@ -1441,7 +1520,7 @@ class MainWindow(QMainWindow):
             if len(selected_modes) == 1:
                 result = self.openai_manager.process_text(transcribed_text, selected_modes[0])
             else:
-                # If multiple modes are selected, use the new process_text_with_multiple_modes method
+                # If multiple modes are selected, use the process_text_with_multiple_modes method
                 result = self.openai_manager.process_text_with_multiple_modes(transcribed_text, selected_modes)
             
             if result.get("success", False):
@@ -1463,10 +1542,22 @@ class MainWindow(QMainWindow):
                 
                 self.process_button.setEnabled(True)
                 self.save_button.setEnabled(True)
-                self.statusBar().showMessage("Text processed successfully")
+                
+                # Update status message based on number of selected modes
+                if len(selected_modes) == 1:
+                    self.statusBar().showMessage(f"Text processed successfully with mode: {selected_mode_names[0]}")
+                else:
+                    self.statusBar().showMessage(f"Text processed successfully with {len(selected_modes)} modes")
             else:
                 error_message = result.get("error", "Unknown error")
-                QMessageBox.warning(self, "Processing Error", f"Failed to process text: {error_message}")
+                if "requires JSON" in error_message and len(selected_modes) > 1:
+                    QMessageBox.warning(
+                        self, 
+                        "Processing Error", 
+                        "Cannot combine JSON-requiring modes with other modes. Please select either a single JSON mode or multiple non-JSON modes."
+                    )
+                else:
+                    QMessageBox.warning(self, "Processing Error", f"Failed to process text: {error_message}")
                 self.statusBar().showMessage("Error processing text")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error processing text: {str(e)}")
@@ -1775,3 +1866,204 @@ class MainWindow(QMainWindow):
         # Set values in UI
         self.user_name_input.setText(variables.get("user_name", ""))
         self.email_signature_input.setText(variables.get("email_signature", ""))
+    
+    def filter_processing_modes(self, text):
+        """Filter processing modes based on search text"""
+        for i in range(self.mode_list.count()):
+            item = self.mode_list.item(i)
+            mode_id = item.data(Qt.ItemDataRole.UserRole)
+            mode_name = item.text()
+            mode_description = self.openai_manager.get_mode_description(mode_id)
+            
+            # Combine name and description for search
+            combined_text = f"{mode_name} {mode_description}".lower()
+            
+            # Check if search text is in combined text
+            if text.lower() in combined_text:
+                item.setHidden(False)
+            else:
+                item.setHidden(True)
+    
+    def update_mode_selection_count(self):
+        """Update the selection count label with the number of selected modes"""
+        count = len(self.mode_list.selectedItems())
+        self.selection_count_label.setText(f"{count} mode{'s' if count != 1 else ''} selected")
+        
+        # Enable/disable the manage selections button based on selection count
+        self.manage_selections_button.setEnabled(count > 0)
+        
+        # Enable/disable the process button based on selection count and transcribed text
+        has_text = bool(self.transcribed_text.toPlainText().strip())
+        self.process_button.setEnabled(count > 0 and has_text)
+    
+    def show_manage_selections_dialog(self):
+        """Show the manage selections dialog to view and deselect processing modes"""
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Manage Processing Mode Selections")
+        dialog.setMinimumWidth(600)
+        dialog.setMinimumHeight(500)
+        
+        layout = QVBoxLayout(dialog)
+        
+        # Add description text
+        description = QLabel("Select or deselect processing modes. Multiple modes will be applied in sequence.")
+        description.setStyleSheet("font-style: italic; color: #666; margin-bottom: 10px;")
+        description.setWordWrap(True)
+        layout.addWidget(description)
+        
+        # Add search box for filtering modes in the dialog
+        search_layout = QHBoxLayout()
+        search_label = QLabel("Search:")
+        dialog_search_edit = QLineEdit()
+        dialog_search_edit.setPlaceholderText("Search processing modes...")
+        search_layout.addWidget(search_label)
+        search_layout.addWidget(dialog_search_edit)
+        layout.addLayout(search_layout)
+        
+        # Create list widget with checkboxes
+        mode_list = QListWidget()
+        mode_list.setAlternatingRowColors(True)
+        layout.addWidget(mode_list)
+        
+        # Add a details text area to show mode descriptions
+        details_label = QLabel("Mode Description:")
+        layout.addWidget(details_label)
+        
+        details_text = QTextEdit()
+        details_text.setReadOnly(True)
+        details_text.setMaximumHeight(100)
+        details_text.setPlaceholderText("Select a mode to view its description")
+        layout.addWidget(details_text)
+        
+        # Populate the list with modes and set checkboxes based on current selection
+        modes = self.openai_manager.get_available_modes()
+        for mode in modes:
+            item = QListWidgetItem(mode["name"])
+            item.setData(Qt.ItemDataRole.UserRole, mode["id"])
+            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+            
+            # Check if this mode is selected in the main list
+            is_selected = False
+            for i in range(self.mode_list.count()):
+                main_item = self.mode_list.item(i)
+                if main_item.isSelected() and main_item.data(Qt.ItemDataRole.UserRole) == mode["id"]:
+                    is_selected = True
+                    break
+            
+            item.setCheckState(Qt.CheckState.Checked if is_selected else Qt.CheckState.Unchecked)
+            mode_list.addItem(item)
+        
+        # Add buttons for select all and deselect all
+        button_layout = QHBoxLayout()
+        
+        select_all_button = QPushButton("Select All")
+        select_all_button.clicked.connect(lambda: self.select_all_modes(mode_list))
+        button_layout.addWidget(select_all_button)
+        
+        deselect_all_button = QPushButton("Deselect All")
+        deselect_all_button.clicked.connect(lambda: self.deselect_all_modes(mode_list))
+        button_layout.addWidget(deselect_all_button)
+        
+        button_layout.addStretch()
+        
+        # Add apply and cancel buttons
+        apply_button = QPushButton("Apply")
+        apply_button.clicked.connect(lambda: self.apply_selection_changes(dialog, mode_list))
+        button_layout.addWidget(apply_button)
+        
+        cancel_button = QPushButton("Cancel")
+        cancel_button.clicked.connect(dialog.reject)
+        button_layout.addWidget(cancel_button)
+        
+        layout.addLayout(button_layout)
+        
+        # Connect signals
+        mode_list.itemClicked.connect(lambda item: self.show_mode_description(item, details_text))
+        dialog_search_edit.textChanged.connect(lambda text: self.filter_dialog_modes(text, mode_list))
+        
+        # Show the dialog
+        dialog.exec()
+    
+    def show_mode_description(self, item, details_text):
+        """Show the description of the selected mode"""
+        mode_id = item.data(Qt.ItemDataRole.UserRole)
+        description = self.openai_manager.get_mode_description(mode_id)
+        if description:
+            details_text.setText(description)
+        else:
+            details_text.setText("No description available for this mode.")
+    
+    def filter_dialog_modes(self, text, mode_list):
+        """Filter the modes in the dialog based on search text"""
+        for i in range(mode_list.count()):
+            item = mode_list.item(i)
+            mode_id = item.data(Qt.ItemDataRole.UserRole)
+            mode_name = item.text().lower()
+            
+            # Get description for additional search context
+            description = self.openai_manager.get_mode_description(mode_id).lower()
+            
+            # Show item if search text is in name or description
+            if text.lower() in mode_name or text.lower() in description:
+                item.setHidden(False)
+            else:
+                item.setHidden(True)
+    
+    def select_all_modes(self, mode_list):
+        """Select all modes in the list"""
+        for i in range(mode_list.count()):
+            item = mode_list.item(i)
+            item.setCheckState(Qt.CheckState.Checked)
+    
+    def deselect_all_modes(self, mode_list):
+        """Deselect all modes in the list"""
+        for i in range(mode_list.count()):
+            item = mode_list.item(i)
+            item.setCheckState(Qt.CheckState.Unchecked)
+    
+    def apply_selection_changes(self, dialog, mode_list):
+        """Apply the selection changes from the manage selections dialog"""
+        # Track changes for status message
+        previously_selected = set()
+        for i in range(self.mode_list.count()):
+            item = self.mode_list.item(i)
+            if item.isSelected():
+                previously_selected.add(item.data(Qt.ItemDataRole.UserRole))
+        
+        # Clear all selections in the main list
+        self.mode_list.clearSelection()
+        
+        # Apply the new selections based on checked items in the dialog
+        modes_to_select = []
+        for i in range(mode_list.count()):
+            item = mode_list.item(i)
+            if item.checkState() == Qt.CheckState.Checked:
+                mode_id = item.data(Qt.ItemDataRole.UserRole)
+                modes_to_select.append(mode_id)
+        
+        # Select the modes in the main list
+        for i in range(self.mode_list.count()):
+            item = self.mode_list.item(i)
+            mode_id = item.data(Qt.ItemDataRole.UserRole)
+            if mode_id in modes_to_select:
+                item.setSelected(True)
+        
+        # Update the selection count
+        self.update_mode_selection_count()
+        
+        # Provide feedback about the changes
+        newly_selected = set(modes_to_select)
+        added = newly_selected - previously_selected
+        removed = previously_selected - newly_selected
+        
+        if added or removed:
+            message_parts = []
+            if added:
+                message_parts.append(f"Added {len(added)} mode{'s' if len(added) > 1 else ''}")
+            if removed:
+                message_parts.append(f"Removed {len(removed)} mode{'s' if len(removed) > 1 else ''}")
+            
+            self.statusBar().showMessage(f"Selection updated: {', '.join(message_parts)}", 3000)
+        
+        # Close the dialog
+        dialog.accept()

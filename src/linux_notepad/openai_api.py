@@ -570,31 +570,42 @@ class OpenAIManager:
             }
     
     def get_available_modes(self):
-        """Get list of available text processing modes sorted alphabetically by name"""
+        """Get list of available text processing modes"""
         modes = []
         for mode_id, data in self.TEXT_PROCESSING_MODES.items():
-            # Handle both legacy string format and new dict format
             if isinstance(data, str):
-                prompt = data
-                requires_json = mode_id == "extract_todos"  # Default assumption
-                name = mode_id.replace("_", " ").title()  # Default name formatting
-                description = prompt[:100] + "..."
+                # Legacy format
+                modes.append({
+                    "id": mode_id,
+                    "name": mode_id.replace("_", " ").title(),
+                    "prompt": data
+                })
             else:
-                prompt = data.get("prompt", "")
-                requires_json = data.get("requires_json", False)
-                # Use the name field if available, otherwise format the mode_id
-                name = data.get("name", mode_id.replace("_", " ").title())
-                # Use the description field if available, otherwise use truncated prompt
-                description = data.get("description", prompt[:100] + "...")
-            
-            modes.append({
-                "id": mode_id, 
-                "name": name,  # Use the name from the JSON file
-                "description": description,
-                "prompt": prompt,
-                "type": "default" if mode_id in self.DEFAULT_TEXT_PROCESSING_MODES else "user",
-                "requires_json": requires_json
-            })
+                # New format
+                modes.append({
+                    "id": mode_id,
+                    "name": data.get("name", mode_id.replace("_", " ").title()),
+                    "prompt": data.get("prompt", ""),
+                    "requires_json": data.get("requires_json", False),
+                    "description": data.get("description", "")
+                })
         
-        # Sort modes alphabetically by name
-        return sorted(modes, key=lambda x: x["name"])
+        # Sort modes: basic_cleanup first, then alphabetically by name
+        return sorted(modes, key=lambda x: (0 if x["id"] == "basic_cleanup" else 1, x["name"]))
+    
+    def get_mode_description(self, mode_id):
+        """Get the description for a specific mode"""
+        mode_data = self.TEXT_PROCESSING_MODES.get(mode_id, {})
+        if isinstance(mode_data, dict):
+            # Return description if available, otherwise return the first part of the prompt
+            description = mode_data.get("description", "")
+            if description:
+                return description
+            
+            # If no description, return the first 100 characters of the prompt
+            prompt = mode_data.get("prompt", "")
+            if prompt:
+                return prompt[:100] + "..." if len(prompt) > 100 else prompt
+        
+        # For legacy string format or if no description/prompt found
+        return ""

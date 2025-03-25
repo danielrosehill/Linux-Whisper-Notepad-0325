@@ -14,6 +14,17 @@ def main():
     app.setOrganizationName("Linux-Whisper-Notepad-0325")
     
     window = MainWindow()
+    
+    # Center the window on screen and set a default size
+    screen_geometry = app.primaryScreen().geometry()
+    window_geometry = window.geometry()
+    window.setGeometry(
+        (screen_geometry.width() - window_geometry.width()) // 2,
+        (screen_geometry.height() - window_geometry.height()) // 2,
+        1000,  # Default width
+        800    # Default height
+    )
+    
     window.show()
     
     sys.exit(app.exec())
