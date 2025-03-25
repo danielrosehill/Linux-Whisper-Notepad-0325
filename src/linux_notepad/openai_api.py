@@ -12,38 +12,8 @@ import wave
 class OpenAIManager:
     """OpenAI API integration for speech-to-text and text processing"""
     
-    # Default text processing modes with their system prompts
-    DEFAULT_TEXT_PROCESSING_MODES = {
-        "basic_cleanup": {
-            "prompt": "Take the following transcript and refine it to add missing punctuation, resolve typos, add paragraph spacing, and generally enhance the presentation of the text while preserving the original meaning.",
-            "requires_json": False
-        },
-        
-        "extract_todos": {
-            "prompt": "Extract only the to-do items from the following dictated text. Format them as a markdown list with checkboxes. For example: '- [ ] Task description'.",
-            "requires_json": True
-        },
-        
-        "shakespearean": {
-            "prompt": "Take the following dictated text and return it in Shakespearean English, maintaining the original meaning but using the style, vocabulary, and sentence structure typical of Shakespeare's works.",
-            "requires_json": False
-        },
-        
-        "meeting_minutes": {
-            "prompt": "Format the following transcript as professional meeting minutes. Identify key discussion points, decisions made, and action items. Use appropriate headings and structure.",
-            "requires_json": False
-        },
-        
-        "bullet_summary": {
-            "prompt": "Summarize the following transcript as concise bullet points, capturing the main ideas and important details.",
-            "requires_json": False
-        },
-        
-        "technical_documentation": {
-            "prompt": "Convert the following dictated text into technical documentation format. Use appropriate headings, code blocks for any technical elements, and clear explanations.",
-            "requires_json": False
-        }
-    }
+    # Default text processing modes are now loaded from a JSON file
+    DEFAULT_TEXT_PROCESSING_MODES = {}
     
     def __init__(self, config):
         """Initialize OpenAI API manager"""
@@ -54,9 +24,40 @@ class OpenAIManager:
         # Set API key if available
         if self.api_key:
             self.client = openai.OpenAI(api_key=self.api_key)
+        
+        # Load default prompts from JSON file
+        self.load_default_prompts()
             
         # Load custom prompts or use defaults
         self.TEXT_PROCESSING_MODES = self.load_custom_prompts()
+    
+    def load_default_prompts(self):
+        """Load default prompts from the default_prompts.json file"""
+        # Path to the default prompts file in the package directory
+        default_prompts_file = os.path.join(os.path.dirname(__file__), "default_prompts.json")
+        
+        try:
+            if os.path.exists(default_prompts_file):
+                with open(default_prompts_file, 'r') as f:
+                    self.DEFAULT_TEXT_PROCESSING_MODES = json.load(f)
+            else:
+                print(f"Default prompts file not found: {default_prompts_file}")
+                # Fallback to minimal defaults if file is missing
+                self.DEFAULT_TEXT_PROCESSING_MODES = {
+                    "basic_cleanup": {
+                        "prompt": "Take the following transcript and refine it to add missing punctuation, resolve typos, add paragraph spacing, and generally enhance the presentation of the text while preserving the original meaning.",
+                        "requires_json": False
+                    }
+                }
+        except Exception as e:
+            print(f"Error loading default prompts: {e}")
+            # Fallback to minimal defaults if loading fails
+            self.DEFAULT_TEXT_PROCESSING_MODES = {
+                "basic_cleanup": {
+                    "prompt": "Take the following transcript and refine it to add missing punctuation, resolve typos, add paragraph spacing, and generally enhance the presentation of the text while preserving the original meaning.",
+                    "requires_json": False
+                }
+            }
     
     def set_api_key(self, api_key):
         """Set OpenAI API key"""

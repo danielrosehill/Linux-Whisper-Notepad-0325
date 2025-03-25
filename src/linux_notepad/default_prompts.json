@@ -1,0 +1,50 @@
+{
+    "basic_cleanup": {
+        "prompt": "Take the following transcript and refine it to add missing punctuation, resolve typos, add paragraph spacing, and generally enhance the presentation of the text while preserving the original meaning.",
+        "requires_json": false
+    },
+    "extract_todos": {
+        "prompt": "Extract only the to-do items from the following dictated text. Format them as a markdown list with checkboxes. For example: '- [ ] Task description'.",
+        "requires_json": true
+    },
+    "shakespearean": {
+        "prompt": "Take the following dictated text and return it in Shakespearean English, maintaining the original meaning but using the style, vocabulary, and sentence structure typical of Shakespeare's works.",
+        "requires_json": false
+    },
+    "meeting_minutes": {
+        "prompt": "Format the following transcript as professional meeting minutes. Identify key discussion points, decisions made, and action items. Use appropriate headings and structure.",
+        "requires_json": false
+    },
+    "bullet_summary": {
+        "prompt": "Summarize the following transcript as concise bullet points, capturing the main ideas and important details.",
+        "requires_json": false
+    },
+    "technical_documentation": {
+        "prompt": "Convert the following dictated text into technical documentation format. Use appropriate headings, code blocks for any technical elements, and clear explanations.",
+        "requires_json": false
+    },
+    "email_draft": {
+        "prompt": "Convert the following dictated text into a professional email format. Add an appropriate subject line, greeting, body paragraphs, and closing. Maintain a professional tone throughout.",
+        "requires_json": false
+    },
+    "blog_post": {
+        "prompt": "Format the following dictated text as a blog post. Add an engaging title, organize content into sections with headings, and improve readability with proper paragraph structure.",
+        "requires_json": false
+    },
+    "academic_paper": {
+        "prompt": "Format the following dictated text in an academic style. Organize content into sections (Introduction, Methods, Results, Discussion, etc.), use formal language, and suggest where citations might be needed.",
+        "requires_json": false
+    },
+    "social_media_post": {
+        "prompt": "Convert the following dictated text into a social media post. Make it concise, engaging, and add appropriate hashtags. Format it to be shareable on platforms like Twitter, LinkedIn, or Instagram.",
+        "requires_json": false
+    },
+    "code_documentation": {
+        "prompt": "Convert the following dictated text into code documentation. Format it with appropriate markdown, code blocks, parameter descriptions, and examples where applicable.",
+        "requires_json": false
+    },
+    "poetry": {
+        "prompt": "Transform the following dictated text into a poem. Maintain the core meaning but add rhythm, structure, and poetic elements.",
+        "requires_json": false
+    }
+}
