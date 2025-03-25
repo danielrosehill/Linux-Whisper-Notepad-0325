@@ -1694,99 +1694,67 @@ class MainWindow(QMainWindow):
     
     def process_text(self):
         """Process the transcribed text using the selected mode(s)"""
-        # Get the current text from the transcribed_text widget
-        # Safety check for openai_manager
-        if not hasattr(self, 'openai_manager') or not self.openai_manager:
-            QMessageBox.critical(self, "Error", "OpenAI manager not properly initialized")
-            self.process_button.setEnabled(False)
-            return
-
-        # This ensures any edits made by the user are included
-        transcribed_text = self.transcribed_text.toPlainText()
-        if not transcribed_text:
-            QMessageBox.warning(self, "Warning", "No transcribed text to process")
+        text = self.transcribed_text.toPlainText().strip()
+        if not text:
+            QMessageBox.warning(self, "No Text", "Please transcribe some audio first.")
             return
         
+        # Get selected modes
+        selected_modes = []
+        for i in range(self.mode_list.count()):
+            item = self.mode_list.item(i)
+            if item.isSelected():
+                mode_id = item.data(Qt.ItemDataRole.UserRole)
+                if mode_id:
+                    selected_modes.append(mode_id)
+        
+        if not selected_modes:
+            QMessageBox.warning(self, "No Mode Selected", "Please select at least one processing mode.")
+            return
+        
+        # Set cursor to wait
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        self.statusBar().showMessage("Processing text...")
+        
         try:
-            # Get selected mode IDs
-            selected_modes = []
-            selected_mode_names = []
-            
-            # Check if mode_list exists and is properly initialized
-            if not hasattr(self, 'mode_list') or not self.mode_list or not hasattr(self.mode_list, 'count'):
-                QMessageBox.warning(self, "Application Error", "Processing modes list is not properly initialized")
-                return
-                
-            for i in range(self.mode_list.count()):
-                item = self.mode_list.item(i)
-                if item and item.isSelected():
-                    mode_id = item.data(Qt.ItemDataRole.UserRole)
-                    if mode_id and isinstance(mode_id, str):  # Make sure we have valid data
-                        selected_modes.append(mode_id)
-                        selected_mode_names.append(item.text())
-            
-            if not selected_modes:
-                QMessageBox.warning(self, "Warning", "No processing mode selected")
-                return
-            
-            # Update status message based on number of selected modes
+            # Create and start the worker thread
             if len(selected_modes) == 1:
-                self.statusBar().showMessage(f"Processing text with mode: {selected_mode_names[0]}...")
+                # Single mode processing
+                self.processing_worker = ProcessingWorker(self.openai_manager, text, selected_modes[0])
+                self.processing_worker.finished.connect(self.handle_processing_result)
+                self.processing_worker.start()
             else:
-                self.statusBar().showMessage(f"Processing text with {len(selected_modes)} modes...")
-            
-            QApplication.processEvents()
-            
-            try:
-                # If only one mode is selected, process normally
-                if len(selected_modes) == 1:
-                    result = self.openai_manager.process_text(transcribed_text, selected_modes[0])
-                else:
-                    # If multiple modes are selected, use the process_text_with_multiple_modes method
-                    result = self.openai_manager.process_text_with_multiple_modes(transcribed_text, selected_modes)
-                
-                if result.get("success", False):
-                    processed_text = result.get("processed_text", "")
-                    suggested_filename = result.get("suggested_filename", "")
-                    
-                    self.processed_text.setPlainText(processed_text)
-                    
-                    # Enable clear and copy buttons for processed text
-                    self.clear_processed_button.setEnabled(True)
-                    self.copy_processed_button.setEnabled(True)
-                    
-                    # Generate filename from suggested title
-                    if suggested_filename:
-                        self.filename_display.setText(f"{suggested_filename}.md")
-                    else:
-                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                        self.filename_display.setText(f"note_{timestamp}.md")
-                    
-                    self.process_button.setEnabled(True)
-                    self.save_button.setEnabled(True)
-                    
-                    # Update status message based on number of selected modes
-                    if len(selected_modes) == 1:
-                        self.statusBar().showMessage(f"Text processed successfully with mode: {selected_mode_names[0]}")
-                    else:
-                        self.statusBar().showMessage(f"Text processed successfully with {len(selected_modes)} modes")
-                else:
-                    error_message = result.get("error", "Unknown error")
-                    if "requires JSON" in error_message and len(selected_modes) > 1:
-                        QMessageBox.warning(
-                            self, 
-                            "Processing Error", 
-                            "Cannot combine JSON-requiring modes with other modes. Please select either a single JSON mode or multiple non-JSON modes."
-                        )
-                    else:
-                        QMessageBox.warning(self, "Processing Error", f"Failed to process text: {error_message}")
-                    self.statusBar().showMessage("Error processing text")
-            except Exception as e:
-                QMessageBox.critical(self, "Error", f"Error processing text: {str(e)}")
-                self.statusBar().showMessage("Error processing text")
+                # Multiple mode processing
+                self.processing_worker = QThread()
+                self.processing_worker.run = lambda: self._process_with_multiple_modes(text, selected_modes)
+                self.processing_worker.finished.connect(self.processing_worker.deleteLater)
+                self.processing_worker.start()
         except Exception as e:
-            QMessageBox.critical(self, "Application Error", f"An unexpected error occurred: {str(e)}")
-            self.statusBar().showMessage("An unexpected error occurred")
+            QApplication.restoreOverrideCursor()
+            QMessageBox.critical(self, "Error", f"Error processing text: {str(e)}")
+            self.statusBar().showMessage("Error processing text")
+    
+    def _process_with_multiple_modes(self, text, mode_ids):
+        """Process text with multiple modes and handle the result"""
+        try:
+            result = self.openai_manager.process_text_with_multiple_modes(text, mode_ids)
+            # Use invokeMethod to safely call from worker thread
+            QMetaObject.invokeMethod(self, "handle_processing_result", 
+                                    Qt.ConnectionType.QueuedConnection,
+                                    Q_ARG(dict, result))
+        except Exception as e:
+            # Use invokeMethod to safely show error from worker thread
+            error_message = str(e)
+            QMetaObject.invokeMethod(self, "_show_processing_error", 
+                                    Qt.ConnectionType.QueuedConnection,
+                                    Q_ARG(str, error_message))
+    
+    @pyqtSlot(str)
+    def _show_processing_error(self, error_message):
+        """Show processing error message (called from worker thread)"""
+        QApplication.restoreOverrideCursor()
+        QMessageBox.critical(self, "Processing Error", f"Error processing text: {error_message}")
+        self.statusBar().showMessage("Error processing text")
     
     def save_text(self):
         """Save processed text to file"""
@@ -2151,7 +2119,7 @@ class MainWindow(QMainWindow):
         if not hasattr(self, 'openai_manager') or not self.openai_manager:
             QMessageBox.critical(self, "Error", "OpenAI manager not properly initialized")
             return
-
+        
         dialog.setWindowTitle("Mode Management")
         dialog.setMinimumWidth(650)
         dialog.setMinimumHeight(550)
@@ -2364,11 +2332,15 @@ class MainWindow(QMainWindow):
             print(f"Warning: Invalid mode_id: {mode_id}")
             return
 
-        description = self.openai_manager.get_mode_description(mode_id)
-        if description:
-            details_text.setText(description)
-        else:
-            details_text.setText("No description available for this mode.")
+        try:
+            description = self.openai_manager.get_mode_description(mode_id)
+            if description:
+                details_text.setText(description)
+            else:
+                details_text.setText("No description available for this mode.")
+        except Exception as e:
+            print(f"Error getting description for mode {mode_id}: {e}")
+            details_text.setText("Error loading description for this mode.")
     
     def filter_dialog_modes(self, text, mode_list):
         """Filter the modes in the dialog based on search text"""
@@ -2383,7 +2355,13 @@ class MainWindow(QMainWindow):
             mode_name = item.text().lower()
             
             # Get description for additional search context
-            description = self.openai_manager.get_mode_description(mode_id).lower()
+            try:
+                description = self.openai_manager.get_mode_description(mode_id)
+                # Ensure description is a string and convert to lowercase
+                description = description.lower() if description else ""
+            except Exception as e:
+                print(f"Error getting description for mode {mode_id}: {e}")
+                description = ""
             
             # Show item if search text is in name or description
             if text.lower() in mode_name or text.lower() in description:
