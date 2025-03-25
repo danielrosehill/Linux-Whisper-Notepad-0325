@@ -63,5 +63,47 @@
         "name": "Poetry",
         "prompt": "Transform the following dictated text into a poem. Maintain the core meaning but add rhythm, structure, and poetic elements.",
         "requires_json": false
+    },
+    "anonymization": {
+        "name": "Anonymization",
+        "prompt": "Take the following dictated text and anonymize all personal identifiers such as names, locations, organizations, dates, and other specific entities that could identify individuals. Replace them with generic placeholders while preserving the overall meaning and readability of the text.",
+        "requires_json": false,
+        "description": "Anonymizes text by replacing names, locations, and other identifying information with generic placeholders"
+    },
+    "enthusiastic": {
+        "name": "Enthusiastic Tone",
+        "prompt": "Transform the following dictated text into a more enthusiastic and energetic version. Add emotional adjectives, intensifiers, and expressive language while maintaining the original meaning.",
+        "requires_json": false,
+        "description": "Increases emotional intensity and adds enthusiasm to the text"
+    },
+    "factual": {
+        "name": "Factual Tone",
+        "prompt": "Convert the following dictated text into a more objective, factual tone. Remove subjective language, emotional expressions, and unnecessary adjectives. Focus on presenting information clearly and concisely with neutral language.",
+        "requires_json": false,
+        "description": "Removes emotional language and converts text to a more objective, factual tone"
+    },
+    "formalize": {
+        "name": "Formalize",
+        "prompt": "Rewrite the following dictated text in a more formal, professional tone. Use proper grammar, sophisticated vocabulary, and structured sentences. Eliminate colloquialisms, contractions, and casual expressions.",
+        "requires_json": false,
+        "description": "Elevates casual text to a more formal, professional style"
+    },
+    "informalize": {
+        "name": "Informalize",
+        "prompt": "Convert the following dictated text into a more casual, conversational tone. Use contractions, simpler vocabulary, and a friendly approach. Make it sound more relaxed and approachable.",
+        "requires_json": false,
+        "description": "Makes formal text more casual and conversational"
+    },
+    "add_sayings": {
+        "name": "Add Sayings & Proverbs",
+        "prompt": "Enhance the following dictated text by incorporating relevant proverbs, sayings, or idioms that complement the content. Integrate these expressions naturally while maintaining the original meaning and flow.",
+        "requires_json": false,
+        "description": "Embellishes text with relevant proverbs, sayings, and idioms"
+    },
+    "de_jargonize": {
+        "name": "De-Jargonize",
+        "prompt": "Simplify the following dictated text by removing technical jargon, specialized terminology, and complex language. Replace these elements with plain, accessible language that anyone can understand while preserving the core meaning.",
+        "requires_json": false,
+        "description": "Removes technical jargon and simplifies complex terminology"
     }
 }

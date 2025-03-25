@@ -294,10 +294,11 @@ class MainWindow(QMainWindow):
         
         time_layout.addStretch()
         
-        # Recording time display
-        self.time_display = QLabel("00:00")
-        self.time_display.setStyleSheet("font-size: 14px; font-weight: bold;")
-        time_layout.addWidget(self.time_display)
+        # Remove the smaller time display and just use the main one at the top
+        # Add a spacer instead to maintain layout
+        spacer = QWidget()
+        spacer.setFixedHeight(20)
+        time_layout.addWidget(spacer)
         
         left_column.addLayout(time_layout)
         
@@ -379,11 +380,14 @@ class MainWindow(QMainWindow):
         
         # Processing mode selection
         mode_layout = QHBoxLayout()
-        mode_label = QLabel("Processing Mode:")
+        mode_label = QLabel("Processing Mode(s):")
         mode_layout.addWidget(mode_label)
         
-        self.mode_combo = QComboBox()
-        mode_layout.addWidget(self.mode_combo, 1)
+        # Replace QComboBox with QListWidget for multiple selection
+        self.mode_list = QListWidget()
+        self.mode_list.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
+        self.mode_list.setMinimumHeight(150)  # Set a minimum height to show multiple items
+        mode_layout.addWidget(self.mode_list, 1)
         
         right_column.addLayout(mode_layout)
         
@@ -782,14 +786,18 @@ class MainWindow(QMainWindow):
             
             # Create a custom widget for the list item with columns
             item_widget = QWidget()
-            item_layout = QHBoxLayout(item_widget)
-            item_layout.setContentsMargins(5, 2, 5, 2)
+            item_layout = QVBoxLayout(item_widget)
+            item_layout.setContentsMargins(5, 5, 5, 5)
+            item_layout.setSpacing(2)
+            
+            # Top row with name and tags
+            top_row = QHBoxLayout()
             
             # Name label (left column)
             name_label = QLabel(mode['name'])
             name_label.setStyleSheet("font-size: 14px; font-weight: bold; color: black;")
             name_label.setObjectName("promptName")  # Add an object name for CSS targeting
-            item_layout.addWidget(name_label, 4)  # Give it more stretch
+            top_row.addWidget(name_label, 4)  # Give it more stretch
             
             # JSON indicator if applicable
             if requires_json:
@@ -798,7 +806,7 @@ class MainWindow(QMainWindow):
                 json_label.setStyleSheet(
                     "background-color: #FF9800; color: white; border-radius: 4px; padding: 2px 8px; font-size: 11px; max-width: 70px;"
                 )
-                item_layout.addWidget(json_label, 1)
+                top_row.addWidget(json_label, 1)
             
             # Tag label (right column)
             if is_default:
@@ -816,7 +824,18 @@ class MainWindow(QMainWindow):
                     "background-color: #2196F3; color: white; border-radius: 4px; padding: 2px 8px; font-size: 11px; max-width: 70px;"
                 )
             
-            item_layout.addWidget(tag_label, 1)  # Give it less stretch
+            top_row.addWidget(tag_label, 1)  # Give it less stretch
+            
+            # Add top row to main layout
+            item_layout.addLayout(top_row)
+            
+            # Add description if available
+            if 'description' in mode and mode['description']:
+                desc_label = QLabel(mode['description'])
+                desc_label.setWordWrap(True)
+                desc_label.setStyleSheet("font-size: 12px; color: #666; font-style: italic;")
+                desc_label.setMaximumHeight(40)  # Limit height to prevent overly tall items
+                item_layout.addWidget(desc_label)
             
             # Create list item
             item = QListWidgetItem()
@@ -1104,9 +1123,10 @@ class MainWindow(QMainWindow):
         
         # Always use basic_cleanup as default processing mode
         # We don't load the last_used_mode from config anymore
-        for i in range(self.mode_combo.count()):
-            if self.mode_combo.itemData(i) == "basic_cleanup":
-                self.mode_combo.setCurrentIndex(i)
+        for i in range(self.mode_list.count()):
+            item = self.mode_list.item(i)
+            if item.data(Qt.ItemDataRole.UserRole) == "basic_cleanup":
+                item.setSelected(True)
                 break
     
     def refresh_audio_devices(self):
@@ -1127,22 +1147,23 @@ class MainWindow(QMainWindow):
                     break
     
     def populate_processing_modes(self):
-        """Populate the processing modes combo box"""
-        self.mode_combo.clear()
+        """Populate the processing modes list widget"""
+        self.mode_list.clear()
         
         modes = self.openai_manager.get_available_modes()
         for mode in modes:
-            self.mode_combo.addItem(mode["name"], mode["id"])
+            item = QListWidgetItem(mode["name"])
+            item.setData(Qt.ItemDataRole.UserRole, mode["id"])
+            # Set tooltip to show description
+            item.setToolTip(mode.get("description", mode.get("prompt", "")[:100] + "..."))
+            self.mode_list.addItem(item)
         
-        # Always set "Basic Cleanup" as default regardless of last used mode
-        basic_cleanup_index = -1
-        for i in range(self.mode_combo.count()):
-            if self.mode_combo.itemData(i) == "basic_cleanup":
-                basic_cleanup_index = i
+        # Select "Basic Cleanup" by default
+        for i in range(self.mode_list.count()):
+            item = self.mode_list.item(i)
+            if item.data(Qt.ItemDataRole.UserRole) == "basic_cleanup":
+                item.setSelected(True)
                 break
-        
-        if basic_cleanup_index >= 0:
-            self.mode_combo.setCurrentIndex(basic_cleanup_index)
     
     def populate_audio_devices(self):
         """Populate the list of audio devices"""
@@ -1174,7 +1195,9 @@ class MainWindow(QMainWindow):
                 # Save selected device to config
                 self.config.set("default_audio_device", str(device_index))
                 
-                # Start timer
+                # Reset recording time and start timer
+                self.recording_time = 0
+                self.time_display.setText("00:00")
                 self.recording_timer.start(1000)
             else:
                 QMessageBox.warning(self, "Error", "Failed to start recording. Please check your microphone.")
@@ -1273,25 +1296,29 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Error", "No audio data to transcribe.")
             return
         
-        # First, transcribe the audio
-        self.statusBar().showMessage("Transcribing audio...")
-        QApplication.processEvents()
+        # Save audio to temporary file
+        temp_file = self.audio_manager.save_to_temp_file()
+        if not temp_file:
+            QMessageBox.warning(self, "Error", "No audio data to transcribe.")
+            return
         
-        # Disable buttons during transcription
+        # Check if API key is set
+        if not self.openai_manager.api_key:
+            QMessageBox.warning(self, "API Key Required", "Please set your OpenAI API key in the Settings tab.")
+            self.tab_widget.setCurrentIndex(1)  # Switch to settings tab
+            return
+        
+        # Show progress
+        self.progress_bar.setVisible(True)
+        self.progress_bar.setValue(0)
         self.transcribe_button.setEnabled(False)
         self.transcribe_process_button.setEnabled(False)
         
-        # Start the transcription worker
-        self.transcription_worker = TranscriptionWorker(
-            self.openai_manager,
-            self.audio_manager.get_temp_file_path()
-        )
-        self.transcription_worker.signals.result.connect(self.handle_transcription_result_for_processing)
-        self.transcription_worker.signals.error.connect(self.handle_transcription_error)
-        self.transcription_worker.signals.finished.connect(self.handle_transcription_finished)
-        
-        # Start the worker
-        self.threadpool.start(self.transcription_worker)
+        # Start transcription in background thread
+        self.transcription_worker = TranscriptionWorker(self.openai_manager, temp_file)
+        self.transcription_worker.progress.connect(self.update_transcription_progress)
+        self.transcription_worker.finished.connect(self.handle_transcription_result_for_processing)
+        self.transcription_worker.start()
     
     def handle_transcription_result_for_processing(self, result):
         """Handle transcription result and proceed to processing"""
@@ -1386,7 +1413,7 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Transcription Error", f"Failed to transcribe audio: {error_message}")
     
     def process_text(self):
-        """Process the transcribed text using the selected mode"""
+        """Process the transcribed text using the selected mode(s)"""
         # Get the current text from the transcribed_text widget
         # This ensures any edits made by the user are included
         transcribed_text = self.transcribed_text.toPlainText()
@@ -1394,8 +1421,15 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Warning", "No transcribed text to process")
             return
         
-        mode_id = self.mode_combo.currentData()
-        if not mode_id:
+        # Get selected mode IDs
+        selected_modes = []
+        for i in range(self.mode_list.count()):
+            item = self.mode_list.item(i)
+            if item.isSelected():
+                mode_id = item.data(Qt.ItemDataRole.UserRole)
+                selected_modes.append(mode_id)
+        
+        if not selected_modes:
             QMessageBox.warning(self, "Warning", "No processing mode selected")
             return
         
@@ -1403,7 +1437,12 @@ class MainWindow(QMainWindow):
         QApplication.processEvents()
         
         try:
-            result = self.openai_manager.process_text(transcribed_text, mode_id)
+            # If only one mode is selected, process normally
+            if len(selected_modes) == 1:
+                result = self.openai_manager.process_text(transcribed_text, selected_modes[0])
+            else:
+                # If multiple modes are selected, use the new process_text_with_multiple_modes method
+                result = self.openai_manager.process_text_with_multiple_modes(transcribed_text, selected_modes)
             
             if result.get("success", False):
                 processed_text = result.get("processed_text", "")

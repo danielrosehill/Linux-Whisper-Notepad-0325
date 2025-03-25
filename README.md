@@ -6,7 +6,7 @@ A notepad and text conversion application for Linux with speech-to-text processi
 
 ## Background
 
-Linux Whisper Notepad is an improved version of a previous Linux Notepad application, created with the assistance of AI cogeneration. The primary motivation behind developing these applications was my profound appreciation for OpenAI's Whisper technology.
+Linux Whisper Notepad is an improved version of a previous Linux Notepad application, created with the assistance of AI code generation. 
 
 When searching for Linux applications that utilized Whisper, I discovered that most available tools only supported locally hosted Whisper models. As someone who prefers using Whisper via the cloud due to its reasonable API costs, reliable performance, and faster processing times, I created this application to fill that gap.
 
