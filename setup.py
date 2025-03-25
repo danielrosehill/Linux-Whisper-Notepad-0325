@@ -10,7 +10,7 @@ setup(
     author="Linux Whisper Notepad Team",
     packages=find_packages(),
     package_data={
-        'src.linux_notepad': ['resources/*'],
+        'src.linux_notepad': ['resources/*', '*.json'],
     },
     install_requires=[
         'PyQt6>=6.4.0',

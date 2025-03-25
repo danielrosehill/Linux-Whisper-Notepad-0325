@@ -5,6 +5,7 @@
 import os
 import json
 import time
+import sys
 from datetime import datetime 
 import openai
 import wave
@@ -34,17 +35,26 @@ class OpenAIManager:
     def load_default_prompts(self):
         """Load default prompts from the default_prompts.json file"""
         # Path to the default prompts file in the package directory
-        default_prompts_file = os.path.join(os.path.dirname(__file__), "default_prompts.json")
+        # Check if we're running in a PyInstaller bundle
+        if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+            # Running as a PyInstaller bundle
+            base_path = sys._MEIPASS
+            default_prompts_file = os.path.join(base_path, "src", "linux_notepad", "default_prompts.json")
+        else:
+            # Running in a normal Python environment
+            default_prompts_file = os.path.join(os.path.dirname(__file__), "default_prompts.json")
         
         try:
             if os.path.exists(default_prompts_file):
                 with open(default_prompts_file, 'r') as f:
                     self.DEFAULT_TEXT_PROCESSING_MODES = json.load(f)
+                print(f"Successfully loaded default prompts from: {default_prompts_file}")
             else:
                 print(f"Default prompts file not found: {default_prompts_file}")
                 # Fallback to minimal defaults if file is missing
                 self.DEFAULT_TEXT_PROCESSING_MODES = {
                     "basic_cleanup": {
+                        "name": "Basic Cleanup",
                         "prompt": "Take the following transcript and refine it to add missing punctuation, resolve typos, add paragraph spacing, and generally enhance the presentation of the text while preserving the original meaning.",
                         "requires_json": False
                     }
@@ -54,16 +64,11 @@ class OpenAIManager:
             # Fallback to minimal defaults if loading fails
             self.DEFAULT_TEXT_PROCESSING_MODES = {
                 "basic_cleanup": {
+                    "name": "Basic Cleanup",
                     "prompt": "Take the following transcript and refine it to add missing punctuation, resolve typos, add paragraph spacing, and generally enhance the presentation of the text while preserving the original meaning.",
                     "requires_json": False
                 }
             }
-    
-    def set_api_key(self, api_key):
-        """Set OpenAI API key"""
-        self.api_key = api_key
-        self.client = openai.OpenAI(api_key=self.api_key)
-        self.config.set("openai_api_key", api_key) 
     
     def load_custom_prompts(self):
         """Load custom prompts from file or use defaults if file doesn't exist"""
@@ -158,6 +163,12 @@ class OpenAIManager:
         """Reset all prompts to defaults"""
         self.TEXT_PROCESSING_MODES = self.DEFAULT_TEXT_PROCESSING_MODES.copy()
         return self.save_custom_prompts(self.TEXT_PROCESSING_MODES)
+    
+    def set_api_key(self, api_key):
+        """Set OpenAI API key"""
+        self.api_key = api_key
+        self.client = openai.OpenAI(api_key=self.api_key)
+        self.config.set("openai_api_key", api_key) 
     
     def transcribe_audio(self, audio_file_path):
         """Transcribe audio using OpenAI Whisper API"""
