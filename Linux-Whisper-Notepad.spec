@@ -7,7 +7,6 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[
-        ('src/linux_notepad/resources', 'src/linux_notepad/resources'),
         ('src/linux_notepad/default_prompts.json', 'src/linux_notepad'),
     ],
     hiddenimports=[],
